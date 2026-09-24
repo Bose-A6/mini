@@ -1,0 +1,2399 @@
+{
+  "gigs": [
+    {
+      "id": "gig-1790165661406",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "emart",
+      "slug": "emart-1k2z7b",
+      "description": "wertfgyhjkyerdtfgvhb",
+      "budget_min": 1500,
+      "budgetMin": 1500,
+      "budget_max": 3000,
+      "budgetMax": 3000,
+      "deadline": "2026-11-15T00:00:00.000Z",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack & Web Dev",
+      "tags": [
+        "TypeScript",
+        "Next.js",
+        "Supabase"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "open",
+      "proposalsCount": 1,
+      "created_at": "2026-09-23T12:14:21.489Z",
+      "createdAt": "2026-09-23T12:14:21.489Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 450
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 600
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 450
+        }
+      ]
+    },
+    {
+      "id": "gig-1790165376454",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector",
+      "slug": "architect-autonomous-multi-modal-rag-platform-with-next-js-15-supabase-vector-z3bf8b",
+      "description": "We are seeking a seasoned Principal Full-Stack & AI Engineer to design and deploy an end-to-end Enterprise RAG platform.\n\nKey Deliverables:\n1. Supabase pgvector embedding pipelines with hybrid sparse/dense search.\n2. Next.js 15 App Router interface with streaming token response & optimistic state caching.\n3. Row Level Security (RLS) policies ensuring strict enterprise data tenant isolation.\n4. Comprehensive Jest integration tests and GitHub Actions CI/CD deployment.",
+      "budget_min": 3500,
+      "budgetMin": 3500,
+      "budget_max": 5000,
+      "budgetMax": 5000,
+      "deadline": "2026-11-15T00:00:00.000Z",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack & Web Dev",
+      "tags": [
+        "Next.js 15",
+        "TypeScript",
+        "Supabase",
+        "pgvector",
+        "LangChain",
+        "TailwindCSS"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "open",
+      "proposalsCount": 0,
+      "created_at": "2026-09-23T12:09:36.470Z",
+      "createdAt": "2026-09-23T12:09:36.470Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 1050
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 1400
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050
+        }
+      ]
+    },
+    {
+      "id": "gig-1790164568264",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector",
+      "slug": "architect-autonomous-multi-modal-rag-platform-with-next-js-15-supabase-vector-cn41qn",
+      "description": "We are seeking a seasoned Principal Full-Stack & AI Engineer to design and deploy an end-to-end Enterprise RAG platform.\n\nKey Deliverables:\n1. Supabase pgvector embedding pipelines with hybrid sparse/dense search.\n2. Next.js 15 App Router interface with streaming token response & optimistic state caching.\n3. Row Level Security (RLS) policies ensuring strict enterprise data tenant isolation.\n4. Comprehensive Jest integration tests and GitHub Actions CI/CD deployment.",
+      "budget_min": 3500,
+      "budgetMin": 3500,
+      "budget_max": 5000,
+      "budgetMax": 5000,
+      "deadline": "2026-11-15T00:00:00.000Z",
+      "categoryId": "ai-ml",
+      "categoryName": "AI & Machine Learning",
+      "tags": [
+        "Next.js 15",
+        "TypeScript",
+        "Supabase",
+        "pgvector",
+        "LangChain",
+        "TailwindCSS"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-23T11:56:08.286Z",
+      "createdAt": "2026-09-23T11:56:08.286Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 1050
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 1400
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050
+        }
+      ]
+    },
+    {
+      "id": "gig-1790163559242",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "dashboard",
+      "slug": "dashboard-29ywjq",
+      "description": "We are seeking a seasoned Principal Full-Stack & AI Engineer to design and deploy an end-to-end Enterprise RAG platform.\n\nKey Deliverables:\n1. Supabase pgvector embedding pipelines with hybrid sparse/dense search.\n2. Next.js 15 App Router interface with streaming token response & optimistic state caching.\n3. Row Level Security (RLS) policies ensuring strict enterprise data tenant isolation.\n4. Comprehensive Jest integration tests and GitHub Actions CI/CD deployment.",
+      "budget_min": 3500,
+      "budgetMin": 3500,
+      "budget_max": 5000,
+      "budgetMax": 5000,
+      "deadline": "2026-11-15T00:00:00.000Z",
+      "categoryId": "mobile-apps",
+      "categoryName": "Mobile Apps",
+      "tags": [
+        "Next.js 15",
+        "TypeScript",
+        "Supabase",
+        "pgvector",
+        "LangChain",
+        "TailwindCSS"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-23T11:39:19.255Z",
+      "createdAt": "2026-09-23T11:39:19.255Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 1050
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 1400
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050
+        }
+      ]
+    },
+    {
+      "id": "gig-1790163272032",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector",
+      "slug": "architect-autonomous-multi-modal-rag-platform-with-next-js-15-supabase-vector-8c8ep9",
+      "description": "We are seeking a seasoned Principal Full-Stack & AI Engineer to design and deploy an end-to-end Enterprise RAG platform.\n\nKey Deliverables:\n1. Supabase pgvector embedding pipelines with hybrid sparse/dense search.\n2. Next.js 15 App Router interface with streaming token response & optimistic state caching.\n3. Row Level Security (RLS) policies ensuring strict enterprise data tenant isolation.\n4. Comprehensive Jest integration tests and GitHub Actions CI/CD deployment.",
+      "budget_min": 3500,
+      "budgetMin": 3500,
+      "budget_max": 5000,
+      "budgetMax": 5000,
+      "deadline": "2026-11-15T00:00:00.000Z",
+      "categoryId": "ai-ml",
+      "categoryName": "AI & Machine Learning",
+      "tags": [
+        "Next.js 15",
+        "TypeScript",
+        "Supabase",
+        "pgvector",
+        "LangChain",
+        "TailwindCSS"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-23T11:34:32.045Z",
+      "createdAt": "2026-09-23T11:34:32.045Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 1050
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 1400
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050
+        }
+      ]
+    },
+    {
+      "id": "gig-1790158308936",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "dress website",
+      "slug": "dress-website-gl724d",
+      "description": "455ertyguilhuyg",
+      "budget_min": 1500,
+      "budgetMin": 1500,
+      "budget_max": 3000,
+      "budgetMax": 3000,
+      "deadline": "2026-11-15T00:00:00.000Z",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack & Web Dev",
+      "tags": [
+        "TypeScript",
+        "Next.js",
+        "Supabase"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-23T10:11:49.003Z",
+      "createdAt": "2026-09-23T10:11:49.004Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 450
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 600
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 450
+        }
+      ]
+    },
+    {
+      "id": "gig-1790153071969",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "website build",
+      "slug": "website-build-73fwwm",
+      "description": "pplokijuhgfcfyrvogeliwfkmj",
+      "budget_min": 100,
+      "budgetMin": 100,
+      "budget_max": 2000,
+      "budgetMax": 2000,
+      "deadline": "2026-09-24T00:00:00.000Z",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack & Web Dev",
+      "tags": [
+        "TypeScript",
+        "Next.js",
+        "Supabase"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-23T08:44:31.978Z",
+      "createdAt": "2026-09-23T08:44:31.978Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 30
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 40
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "gig-1790085600144",
+      "client_id": "client-sarah-jenkins",
+      "clientId": "client-sarah-jenkins",
+      "title": "Autonomous Multi-Model Web Agent Platform",
+      "slug": "autonomous-multi-model-web-agent-platform-j8nnut",
+      "description": "We require a senior full-stack AI engineer to build a multi-agent platform with real-time streaming, Supabase vector search, and escrow payments.",
+      "budget_min": 5000,
+      "budgetMin": 5000,
+      "budget_max": 10000,
+      "budgetMax": 10000,
+      "deadline": "2026-12-15",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack Architecture",
+      "tags": [
+        "AI Agents",
+        "Next.js",
+        "LangGraph",
+        "TypeScript",
+        "Supabase"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-22T14:00:00.144Z",
+      "createdAt": "2026-09-22T14:00:00.144Z",
+      "clientName": "Sarah Jenkins",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "clientCompany": "Aetheria Cloud AI",
+      "clientVerified": true,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Vector DB Schema",
+          "amount": 3000
+        },
+        {
+          "title": "Agent Orchestration & Realtime UI",
+          "amount": 4000
+        }
+      ]
+    },
+    {
+      "id": "gig-1790083456564",
+      "client_id": "user-client-1",
+      "clientId": "user-client-1",
+      "title": "Enterprise Next-Gen AI Pipeline",
+      "slug": "enterprise-next-gen-ai-pipeline-47z3dh",
+      "description": "Build a production-grade multimodal agent pipeline with Supabase backend.",
+      "budget_min": 3000,
+      "budgetMin": 3000,
+      "budget_max": 6000,
+      "budgetMax": 6000,
+      "deadline": "2026-11-01",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack Architecture",
+      "tags": [
+        "AI",
+        "Next.js",
+        "PostgreSQL",
+        "LangChain"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "open",
+      "proposalsCount": 2,
+      "created_at": "2026-09-22T13:24:16.564Z",
+      "createdAt": "2026-09-22T13:24:16.564Z",
+      "clientName": "Nexus Tech Corp",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "clientCompany": "Verified Enterprise",
+      "clientVerified": true,
+      "suggestedMilestones": [
+        {
+          "title": "Core Agent Architecture",
+          "amount": 2500
+        },
+        {
+          "title": "UI Dashboard & Analytics",
+          "amount": 2500
+        }
+      ]
+    },
+    {
+      "id": "gig-1790083287845",
+      "client_id": "user-client-1",
+      "clientId": "user-client-1",
+      "title": "Enterprise Next-Gen AI Pipeline",
+      "slug": "enterprise-next-gen-ai-pipeline-pc5kic",
+      "description": "Build a production-grade multimodal agent pipeline with Supabase backend.",
+      "budget_min": 3000,
+      "budgetMin": 3000,
+      "budget_max": 6000,
+      "budgetMax": 6000,
+      "deadline": "2026-11-01",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack Architecture",
+      "tags": [
+        "AI",
+        "Next.js",
+        "PostgreSQL",
+        "LangChain"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "open",
+      "proposalsCount": 1,
+      "created_at": "2026-09-22T13:21:27.846Z",
+      "createdAt": "2026-09-22T13:21:27.846Z",
+      "clientName": "Nexus Tech Corp",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "clientCompany": "Verified Enterprise",
+      "clientVerified": true,
+      "suggestedMilestones": [
+        {
+          "title": "Core Agent Architecture",
+          "amount": 2500
+        },
+        {
+          "title": "UI Dashboard & Analytics",
+          "amount": 2500
+        }
+      ]
+    },
+    {
+      "id": "gig-verify-1790014123215",
+      "client_id": "client-edge-lab",
+      "clientId": "client-edge-lab",
+      "title": "Real-Time Edge Audio Synthesis",
+      "slug": "real-time-edge-audio-synthesis-b022ae31",
+      "description": "Need WebAudio and WebAssembly audio synthesis pipeline.",
+      "budget_min": 3000,
+      "budgetMin": 3000,
+      "budget_max": 6000,
+      "budgetMax": 6000,
+      "deadline": "2026-10-05T18:08:43.257Z",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack Architecture",
+      "tags": [
+        "Full-Stack",
+        "Production"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-21T18:08:43.257Z",
+      "createdAt": "2026-09-21T18:08:43.257Z",
+      "clientName": "Sarah Connor",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "clientCompany": "Verified Client",
+      "clientVerified": true
+    },
+    {
+      "id": "gig-1790012953389",
+      "client_id": "client-edge-node",
+      "clientId": "client-edge-node",
+      "title": "Distributed Edge Streaming Engine - 1790012951328",
+      "slug": "distributed-edge-streaming-engine-1790012951328-f1cde1c1",
+      "description": "Ultra-low latency streaming with WebAssembly and WebTransport.",
+      "budget_min": 6000,
+      "budgetMin": 6000,
+      "budget_max": 11000,
+      "budgetMax": 11000,
+      "deadline": "2026-10-05T17:49:13.391Z",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack Architecture",
+      "tags": [
+        "Full-Stack",
+        "Production"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-21T17:49:13.391Z",
+      "createdAt": "2026-09-21T17:49:13.391Z",
+      "clientName": "Edge Systems Inc",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "clientCompany": "Verified Client",
+      "clientVerified": true
+    },
+    {
+      "id": "gig-1790012216935",
+      "client_id": "client-e2e-1",
+      "clientId": "client-e2e-1",
+      "title": "Autonomous Multi-Agent AI Workflow - 1790012216883",
+      "slug": "autonomous-multi-agent-ai-workflow-1790012216883-069ed2b9",
+      "description": "Build LangGraph multi-agent swarm with Supabase vector search.",
+      "budget_min": 4500,
+      "budgetMin": 4500,
+      "budget_max": 8000,
+      "budgetMax": 8000,
+      "deadline": "2026-10-05T17:36:56.935Z",
+      "categoryId": "ai-ml",
+      "categoryName": "AI & Machine Learning",
+      "tags": [
+        "LangGraph",
+        "Python",
+        "FastAPI"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-21T17:36:56.935Z",
+      "createdAt": "2026-09-21T17:36:56.935Z",
+      "clientName": "Alpha Founder",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "clientCompany": "Alpha Corp",
+      "clientVerified": true
+    },
+    {
+      "id": "gig-1790011977906",
+      "client_id": "client-verified-99",
+      "clientId": "client-verified-99",
+      "title": "Real-Time WebRTC Video Infrastructure",
+      "slug": "real-time-webrtc-video-infrastructure-c6b055f0",
+      "description": "Need a WebRTC specialist for selective forwarding unit implementation.",
+      "budget_min": 5000,
+      "budgetMin": 5000,
+      "budget_max": 9000,
+      "budgetMax": 9000,
+      "deadline": "2026-10-05T17:32:57.906Z",
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack Architecture",
+      "tags": [
+        "Full-Stack",
+        "Production"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-21T17:32:57.906Z",
+      "createdAt": "2026-09-21T17:32:57.906Z",
+      "clientName": "Enterprise Client",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "clientCompany": "Verified Client",
+      "clientVerified": true
+    },
+    {
+      "id": "gig-101",
+      "clientId": "client-1",
+      "client_id": "client-1",
+      "title": "Autonomous Multi-Agent AI Workflow Architecture",
+      "slug": "autonomous-multi-agent-ai-workflow-architecture",
+      "description": "Looking for a senior AI Engineer to architect and build a multi-agent system using LangGraph and OpenAI function calling with production telemetry.",
+      "budget_min": 4500,
+      "budgetMin": 4500,
+      "budget_max": 8500,
+      "budgetMax": 8500,
+      "categoryId": "ai-ml",
+      "categoryName": "AI & Machine Learning",
+      "status": "open",
+      "tags": [
+        "LangGraph",
+        "Python",
+        "FastAPI",
+        "OpenAI",
+        "Docker"
+      ],
+      "proposalsCount": 3,
+      "deadline": "2026-10-05T17:26:50.577Z",
+      "created_at": "2026-09-19T17:26:50.578Z",
+      "createdAt": "2026-09-19T17:26:50.578Z",
+      "clientName": "Alex Rivera",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "clientCompany": "Synthetix AI Corp",
+      "clientVerified": true
+    },
+    {
+      "id": "gig-102",
+      "clientId": "client-2",
+      "client_id": "client-2",
+      "title": "Next.js 15 Full-Stack Fintech Platform with Stripe Escrow",
+      "slug": "nextjs-15-fullstack-fintech-platform-stripe",
+      "description": "Develop a high-throughput financial management portal with automated invoice processing, Stripe billing webhooks, and sub-second dashboard rendering.",
+      "budget_min": 6000,
+      "budgetMin": 6000,
+      "budget_max": 12000,
+      "budgetMax": 12000,
+      "categoryId": "fullstack",
+      "categoryName": "Full-Stack Architecture",
+      "status": "awarded",
+      "tags": [
+        "Next.js 15",
+        "TypeScript",
+        "TailwindCSS",
+        "PostgreSQL",
+        "Stripe API"
+      ],
+      "proposalsCount": 5,
+      "deadline": "2026-10-12T17:26:50.578Z",
+      "created_at": "2026-09-20T17:26:50.578Z",
+      "createdAt": "2026-09-20T17:26:50.578Z",
+      "clientName": "Marcus Vance",
+      "clientAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "clientCompany": "Apex Capital Labs",
+      "clientVerified": true
+    },
+    {
+      "id": "gig-103",
+      "clientId": "client-3",
+      "client_id": "client-3",
+      "title": "Design System & Micro-Interactions for Web3 DeFi Terminal",
+      "slug": "design-system-micro-interactions-web3-defi",
+      "description": "We require a top-tier UI/UX product designer to craft a dark-mode luxury design system with interactive charts and fluid micro-animations.",
+      "budget_min": 3500,
+      "budgetMin": 3500,
+      "budget_max": 7000,
+      "budgetMax": 7000,
+      "categoryId": "ui-ux",
+      "categoryName": "UI/UX Design Systems",
+      "status": "open",
+      "tags": [
+        "Figma",
+        "Design Systems",
+        "Dark Mode",
+        "Framer Motion"
+      ],
+      "proposalsCount": 2,
+      "deadline": "2026-10-01T17:26:50.578Z",
+      "created_at": "2026-09-18T17:26:50.578Z",
+      "createdAt": "2026-09-18T17:26:50.578Z",
+      "clientName": "Elena Rostova",
+      "clientAvatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+      "clientCompany": "Krypton Protocol",
+      "clientVerified": true
+    },
+    {
+      "id": "gig-104",
+      "clientId": "client-4",
+      "client_id": "client-4",
+      "title": "Kubernetes Cloud Infrastructure & Zero-Downtime CI/CD",
+      "slug": "kubernetes-cloud-infrastructure-zero-downtime-cicd",
+      "description": "Design and deploy a production-grade multi-region Kubernetes cluster with automated Terraform provisioning, ArgoCD GitOps, and Prometheus monitoring.",
+      "budget_min": 5000,
+      "budgetMin": 5000,
+      "budget_max": 10000,
+      "budgetMax": 10000,
+      "categoryId": "cloud-devops",
+      "categoryName": "Cloud & DevOps",
+      "status": "open",
+      "tags": [
+        "Kubernetes",
+        "Terraform",
+        "AWS",
+        "Docker",
+        "GitOps"
+      ],
+      "proposalsCount": 1,
+      "deadline": "2026-10-09T18:05:19.819Z",
+      "created_at": "2026-09-17T18:05:19.819Z",
+      "createdAt": "2026-09-17T18:05:19.819Z",
+      "clientName": "David Chen",
+      "clientAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      "clientCompany": "CloudScale Technologies",
+      "clientVerified": true
+    },
+    {
+      "id": "gig-105",
+      "clientId": "client-5",
+      "client_id": "client-5",
+      "title": "Cross-Platform React Native Mobile App with Offline Sync",
+      "slug": "cross-platform-react-native-mobile-app-offline-sync",
+      "description": "Looking for a React Native expert to build an enterprise mobile application featuring WatermelonDB local offline sync, biometric security, and push notifications.",
+      "budget_min": 4000,
+      "budgetMin": 4000,
+      "budget_max": 8000,
+      "budgetMax": 8000,
+      "categoryId": "mobile-apps",
+      "categoryName": "Mobile App Development",
+      "status": "open",
+      "tags": [
+        "React Native",
+        "TypeScript",
+        "iOS",
+        "Android",
+        "Offline First"
+      ],
+      "proposalsCount": 4,
+      "deadline": "2026-10-06T18:05:19.819Z",
+      "created_at": "2026-09-19T18:05:19.819Z",
+      "createdAt": "2026-09-19T18:05:19.819Z",
+      "clientName": "Sophia Lin",
+      "clientAvatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
+      "clientCompany": "Nexus Mobile Labs",
+      "clientVerified": true
+    }
+  ],
+  "bids": [
+    {
+      "id": "bid-1790165680187",
+      "gig_id": "gig-1790165661406",
+      "gigId": "gig-1790165661406",
+      "freelancer_id": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "proposed_price": 2250,
+      "proposedPrice": 2250,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "Hi bosecli,\n\nI reviewed your requirements for \"emart\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "coverMessage": "Hi bosecli,\n\nI reviewed your requirements for \"emart\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "milestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 450
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 600
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 450
+        }
+      ],
+      "status": "pending",
+      "created_at": "2026-09-23T12:14:40.187Z",
+      "createdAt": "2026-09-23T12:14:40.187Z",
+      "freelancerName": "bose",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790164579066",
+      "gig_id": "gig-1790164568264",
+      "gigId": "gig-1790164568264",
+      "freelancer_id": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "proposed_price": 4250,
+      "proposedPrice": 4250,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "Hi bosecli,\n\nI reviewed your requirements for \"Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "coverMessage": "Hi bosecli,\n\nI reviewed your requirements for \"Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "milestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 1050
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 1400
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050
+        }
+      ],
+      "status": "accepted",
+      "created_at": "2026-09-23T11:56:19.066Z",
+      "createdAt": "2026-09-23T11:56:19.066Z",
+      "freelancerName": "bose",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790163572576",
+      "gig_id": "gig-1790163559242",
+      "gigId": "gig-1790163559242",
+      "freelancer_id": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "proposed_price": 4250,
+      "proposedPrice": 4250,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "Hi bosecli,\n\nI reviewed your requirements for \"Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "coverMessage": "Hi bosecli,\n\nI reviewed your requirements for \"Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "milestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 1050
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 1400
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050
+        }
+      ],
+      "status": "accepted",
+      "created_at": "2026-09-23T11:39:32.576Z",
+      "createdAt": "2026-09-23T11:39:32.576Z",
+      "freelancerName": "bose",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790163284954",
+      "gig_id": "gig-1790163272032",
+      "gigId": "gig-1790163272032",
+      "freelancer_id": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "proposed_price": 4250,
+      "proposedPrice": 4250,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "Hi bosecli,\n\nI reviewed your requirements for \"Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "coverMessage": "Hi bosecli,\n\nI reviewed your requirements for \"Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "milestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 1050
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 1400
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050
+        }
+      ],
+      "status": "accepted",
+      "created_at": "2026-09-23T11:34:44.954Z",
+      "createdAt": "2026-09-23T11:34:44.954Z",
+      "freelancerName": "bose",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790158396316",
+      "gig_id": "gig-1790158308936",
+      "gigId": "gig-1790158308936",
+      "freelancer_id": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "proposed_price": 2250,
+      "proposedPrice": 2250,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "5poiuyi58566hji8",
+      "coverMessage": "5poiuyi58566hji8",
+      "milestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 450
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 600
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 450
+        }
+      ],
+      "status": "accepted",
+      "created_at": "2026-09-23T10:13:16.316Z",
+      "createdAt": "2026-09-23T10:13:16.316Z",
+      "freelancerName": "bose",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790153155411",
+      "gig_id": "gig-1790153071969",
+      "gigId": "gig-1790153071969",
+      "freelancer_id": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "proposed_price": 1050,
+      "proposedPrice": 1050,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "dksfhbijgbdojdgn dk",
+      "coverMessage": "dksfhbijgbdojdgn dk",
+      "milestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 30
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 40
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 30
+        }
+      ],
+      "status": "accepted",
+      "created_at": "2026-09-23T08:45:55.411Z",
+      "createdAt": "2026-09-23T08:45:55.411Z",
+      "freelancerName": "bose",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790152751908",
+      "gig_id": "gig-1790083456564",
+      "gigId": "gig-1790083456564",
+      "freelancer_id": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "proposed_price": 4500,
+      "proposedPrice": 4500,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "Hi Nexus Tech Corp,\n\nI reviewed your requirements for \"Enterprise Next-Gen AI Pipeline\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "coverMessage": "Hi Nexus Tech Corp,\n\nI reviewed your requirements for \"Enterprise Next-Gen AI Pipeline\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbose",
+      "milestones": [
+        {
+          "title": "Core Agent Architecture",
+          "amount": 2500
+        },
+        {
+          "title": "UI Dashboard & Analytics",
+          "amount": 2500
+        }
+      ],
+      "status": "pending",
+      "created_at": "2026-09-23T08:39:11.908Z",
+      "createdAt": "2026-09-23T08:39:11.908Z",
+      "freelancerName": "bose",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerRating": 0,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790085607207",
+      "gig_id": "gig-1790085600144",
+      "gigId": "gig-1790085600144",
+      "freelancer_id": "freelancer-alex-rivera",
+      "freelancerId": "freelancer-alex-rivera",
+      "proposed_price": 7000,
+      "proposedPrice": 7000,
+      "delivery_days": 20,
+      "deliveryDays": 20,
+      "cover_message": "I have designed distributed multi-agent workflows for enterprise clients. I can deliver both milestones with full test coverage ahead of schedule.",
+      "coverMessage": "I have designed distributed multi-agent workflows for enterprise clients. I can deliver both milestones with full test coverage ahead of schedule.",
+      "milestones": [
+        {
+          "title": "Phase 1: Agent Architecture & RAG vector store",
+          "amount": 3000
+        },
+        {
+          "title": "Phase 2: Frontend Dashboard & Live Telemetry",
+          "amount": 4000
+        }
+      ],
+      "status": "accepted",
+      "created_at": "2026-09-22T14:00:07.207Z",
+      "createdAt": "2026-09-22T14:00:07.207Z",
+      "freelancerName": "Alex Rivera",
+      "freelancerTitle": "Staff AI Systems Architect",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+      "freelancerRating": 4.99,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790083457479",
+      "gig_id": "gig-1790083456564",
+      "gigId": "gig-1790083456564",
+      "freelancer_id": "user-freelancer-alex",
+      "freelancerId": "user-freelancer-alex",
+      "proposed_price": 4800,
+      "proposedPrice": 4800,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "I have delivered 10+ similar AI systems. Ready to deploy milestone 1 in 5 days.",
+      "coverMessage": "I have delivered 10+ similar AI systems. Ready to deploy milestone 1 in 5 days.",
+      "milestones": [],
+      "status": "pending",
+      "created_at": "2026-09-22T13:24:17.479Z",
+      "createdAt": "2026-09-22T13:24:17.479Z",
+      "freelancerName": "Alex Rivera",
+      "freelancerTitle": "Senior Full-Stack AI Engineer",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+      "freelancerRating": 4.98,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790083289080",
+      "gig_id": "gig-1790083287845",
+      "gigId": "gig-1790083287845",
+      "freelancer_id": "user-freelancer-alex",
+      "freelancerId": "user-freelancer-alex",
+      "proposed_price": 4800,
+      "proposedPrice": 4800,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "I have delivered 10+ similar AI systems. Ready to deploy milestone 1 in 5 days.",
+      "coverMessage": "I have delivered 10+ similar AI systems. Ready to deploy milestone 1 in 5 days.",
+      "milestones": [],
+      "status": "pending",
+      "created_at": "2026-09-22T13:21:29.080Z",
+      "createdAt": "2026-09-22T13:21:29.080Z",
+      "freelancerName": "Alex Rivera",
+      "freelancerTitle": "Senior Full-Stack AI Engineer",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+      "freelancerRating": 4.98,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790014324708",
+      "gig_id": "gig-1790011052508",
+      "gigId": "gig-1790011052508",
+      "freelancer_id": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "proposed_price": 2250,
+      "proposedPrice": 2250,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "kl",
+      "coverMessage": "kl",
+      "milestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 450
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 600
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 450
+        }
+      ],
+      "status": "pending",
+      "created_at": "2026-09-21T18:12:04.708Z",
+      "createdAt": "2026-09-21T18:12:04.708Z",
+      "freelancerName": "bose",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerRating": 0,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790014123453",
+      "gig_id": "gig-verify-1790014123215",
+      "gigId": "gig-verify-1790014123215",
+      "freelancer_id": "free-audio-dev",
+      "freelancerId": "free-audio-dev",
+      "proposed_price": 3500,
+      "proposedPrice": 3500,
+      "delivery_days": 10,
+      "deliveryDays": 10,
+      "cover_message": "Experienced in WebAudio DSP.",
+      "coverMessage": "Experienced in WebAudio DSP.",
+      "milestones": [],
+      "status": "accepted",
+      "created_at": "2026-09-21T18:08:43.453Z",
+      "createdAt": "2026-09-21T18:08:43.453Z",
+      "freelancerName": "David Sound",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790012953528",
+      "gig_id": "gig-1790012953389",
+      "gigId": "gig-1790012953389",
+      "freelancer_id": "freelancer-stream-pro",
+      "freelancerId": "freelancer-stream-pro",
+      "proposed_price": 8500,
+      "proposedPrice": 8500,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "I have built WebAssembly media pipelines for global CDN streaming.",
+      "coverMessage": "I have built WebAssembly media pipelines for global CDN streaming.",
+      "milestones": [],
+      "status": "accepted",
+      "created_at": "2026-09-21T17:49:13.528Z",
+      "createdAt": "2026-09-21T17:49:13.528Z",
+      "freelancerName": "Elena Rostova",
+      "freelancerTitle": "Streaming Protocols Specialist",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790012217199",
+      "gig_id": "gig-1790012216935",
+      "gigId": "gig-1790012216935",
+      "freelancer_id": "freelancer-e2e-1",
+      "freelancerId": "freelancer-e2e-1",
+      "proposed_price": 5200,
+      "proposedPrice": 5200,
+      "delivery_days": 12,
+      "deliveryDays": 12,
+      "cover_message": "I specialize in LangGraph and multi-agent coordination.",
+      "coverMessage": "I specialize in LangGraph and multi-agent coordination.",
+      "milestones": [
+        {
+          "title": "Milestone 1: Agent Swarm Architecture",
+          "amount": 2600
+        },
+        {
+          "title": "Milestone 2: Production Deploy & Tooling",
+          "amount": 2600
+        }
+      ],
+      "status": "accepted",
+      "created_at": "2026-09-21T17:36:57.199Z",
+      "createdAt": "2026-09-21T17:36:57.199Z",
+      "freelancerName": "Beta Engineer",
+      "freelancerTitle": "Senior AI Specialist",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
+      "id": "bid-1790011978112",
+      "gig_id": "gig-1790011977906",
+      "gigId": "gig-1790011977906",
+      "freelancer_id": "freelancer-webrtc-1",
+      "freelancerId": "freelancer-webrtc-1",
+      "proposed_price": 6500,
+      "proposedPrice": 6500,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "Experienced with mediasoup and Janus WebRTC servers.",
+      "coverMessage": "Experienced with mediasoup and Janus WebRTC servers.",
+      "milestones": [],
+      "status": "accepted",
+      "created_at": "2026-09-21T17:32:58.113Z",
+      "createdAt": "2026-09-21T17:32:58.113Z",
+      "freelancerName": "Alex WebRTC",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "freelancerRating": 5,
+      "isVerified": true
+    }
+  ],
+  "contracts": [
+    {
+      "id": "contract-1790164624146",
+      "gigId": "gig-1790164568264",
+      "gigTitle": "Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerName": "bose",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "status": "completed",
+      "amount": 4250,
+      "escrowFunded": true,
+      "deadline": "2026-10-07",
+      "createdAt": "2026-09-23T11:57:04.154Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-contract-1790164624146-0",
+          "title": "System Architecture & Schema Design",
+          "amount": 1050,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:58:43.530Z"
+        },
+        {
+          "id": "m-contract-1790164624146-1",
+          "title": "Core Functionality & API Integration",
+          "amount": 1400,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:58:43.530Z"
+        },
+        {
+          "id": "m-contract-1790164624146-2",
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:58:43.530Z"
+        }
+      ],
+      "deliverables": [],
+      "handoverNotes": "w45yu",
+      "deliveredAt": "2026-09-23T11:58:31.880Z",
+      "completedAt": "2026-09-23T11:58:43.530Z",
+      "clientRating": 5,
+      "clientReview": "Outstanding engineering execution, seamless communication, and on-time milestone delivery!"
+    },
+    {
+      "id": "contract-test-seq-1790164294402",
+      "gigId": "gig-test-seq",
+      "gigTitle": "Sequential Milestones Test",
+      "clientId": "client-seq",
+      "clientName": "Enterprise Client",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "freelancerId": "freelancer-seq",
+      "freelancerName": "Professional Freelancer",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "status": "in_progress",
+      "amount": 2250,
+      "escrowFunded": true,
+      "deadline": "2026-10-07",
+      "createdAt": "2026-09-23T11:51:34.425Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-1",
+          "title": "Milestone 1",
+          "amount": 450,
+          "status": "approved",
+          "approvedAt": "2026-09-23T11:51:34.436Z"
+        },
+        {
+          "id": "m-2",
+          "title": "Milestone 2",
+          "amount": 600,
+          "status": "in_progress"
+        },
+        {
+          "id": "m-3",
+          "title": "Milestone 3",
+          "amount": 1200,
+          "status": "pending"
+        }
+      ],
+      "deliverables": []
+    },
+    {
+      "id": "contract-test-seq-1790164262319",
+      "gigId": "gig-test-seq",
+      "gigTitle": "Multi-Milestone Escrow Test",
+      "clientId": "client-seq-1",
+      "clientName": "Enterprise Client",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "freelancerId": "freelancer-seq-1",
+      "freelancerName": "Specialist Freelancer",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "status": "in_progress",
+      "amount": 2250,
+      "escrowFunded": true,
+      "deadline": "2026-10-07",
+      "createdAt": "2026-09-23T11:51:02.350Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-1",
+          "title": "System Architecture & Schema Design",
+          "amount": 450,
+          "status": "in_progress",
+          "deadline": "2026-09-30"
+        },
+        {
+          "id": "m-2",
+          "title": "Core Functionality & API Integration",
+          "amount": 600,
+          "status": "pending",
+          "deadline": "2026-10-07"
+        },
+        {
+          "id": "m-3",
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1200,
+          "status": "pending",
+          "deadline": "2026-10-14"
+        }
+      ],
+      "deliverables": []
+    },
+    {
+      "id": "contract-1790163586791",
+      "gigId": "gig-1790163559242",
+      "gigTitle": "dashboard",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerName": "bose",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "status": "completed",
+      "amount": 4250,
+      "escrowFunded": true,
+      "deadline": "2026-10-07",
+      "createdAt": "2026-09-23T11:39:46.803Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-contract-1790163586791-0",
+          "title": "System Architecture & Schema Design",
+          "amount": 1050,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:42:11.506Z"
+        },
+        {
+          "id": "m-contract-1790163586791-1",
+          "title": "Core Functionality & API Integration",
+          "amount": 1400,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:42:11.506Z"
+        },
+        {
+          "id": "m-contract-1790163586791-2",
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:42:11.506Z"
+        }
+      ],
+      "deliverables": [],
+      "completedAt": "2026-09-23T11:42:11.506Z",
+      "clientRating": 5,
+      "clientReview": "Outstanding engineering execution, seamless communication, and on-time milestone delivery!"
+    },
+    {
+      "id": "contract-1790163386402",
+      "gigId": "gig-1790163272032",
+      "gigTitle": "Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerName": "bose",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "status": "completed",
+      "amount": 4250,
+      "escrowFunded": true,
+      "deadline": "2026-10-07",
+      "createdAt": "2026-09-23T11:36:26.429Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-contract-1790163386402-0",
+          "title": "System Architecture & Schema Design",
+          "amount": 1050,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:37:42.919Z"
+        },
+        {
+          "id": "m-contract-1790163386402-1",
+          "title": "Core Functionality & API Integration",
+          "amount": 1400,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:37:42.919Z"
+        },
+        {
+          "id": "m-contract-1790163386402-2",
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:37:42.919Z"
+        }
+      ],
+      "deliverables": [],
+      "completedAt": "2026-09-23T11:37:42.919Z",
+      "clientRating": 5,
+      "clientReview": "Outstanding engineering execution, seamless communication, and on-time milestone delivery!"
+    },
+    {
+      "id": "contract-ms-test-1790163108568",
+      "gigId": "gig-test-ms",
+      "gigTitle": "E-Commerce Platform",
+      "clientId": "client-test",
+      "clientName": "Test Client",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "freelancerId": "freelancer-test",
+      "freelancerName": "Test Freelancer",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "status": "completed",
+      "amount": 1500,
+      "escrowFunded": true,
+      "deadline": "2026-10-07",
+      "createdAt": "2026-09-23T11:31:48.658Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "contract-ms-test-1790163108568-m0",
+          "title": "System Architecture & Schema Design",
+          "amount": 450,
+          "status": "approved",
+          "deadline": "2026-09-30",
+          "approvedAt": "2026-09-23T11:31:48.757Z"
+        },
+        {
+          "id": "contract-ms-test-1790163108568-m1",
+          "title": "Core Functionality & API Integration",
+          "amount": 600,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:31:48.757Z"
+        },
+        {
+          "id": "contract-ms-test-1790163108568-m2",
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 450,
+          "status": "approved",
+          "deadline": "2026-10-14",
+          "approvedAt": "2026-09-23T11:31:48.757Z"
+        }
+      ],
+      "deliverables": [],
+      "completedAt": "2026-09-23T11:31:48.757Z",
+      "clientRating": 5,
+      "clientReview": "Excellent work!"
+    },
+    {
+      "id": "contract-1790158433731",
+      "gigId": "gig-1790158308936",
+      "gigTitle": "dress website",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerName": "bose",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "status": "completed",
+      "amount": 2250,
+      "escrowFunded": true,
+      "deadline": "2026-10-07",
+      "createdAt": "2026-09-23T10:13:53.740Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-1790158433731-0",
+          "title": "System Architecture & Schema Design",
+          "amount": 450,
+          "status": "approved",
+          "deadline": "2026-09-30",
+          "approvedAt": "2026-09-23T11:26:39.185Z"
+        },
+        {
+          "id": "m-1790158433731-1",
+          "title": "Core Functionality & API Integration",
+          "amount": 600,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:26:39.186Z"
+        },
+        {
+          "id": "m-1790158433731-2",
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 450,
+          "status": "approved",
+          "deadline": "2026-10-14",
+          "approvedAt": "2026-09-23T11:26:39.186Z"
+        }
+      ],
+      "deliverables": [],
+      "handoverNotes": "kj",
+      "clientRating": 5,
+      "clientReview": "Outstanding engineering execution, seamless communication, and on-time milestone delivery!"
+    },
+    {
+      "id": "contract-1790153162109",
+      "gigId": "gig-1790153071969",
+      "gigTitle": "website build",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "freelancerId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "freelancerName": "bose",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "status": "completed",
+      "amount": 1050,
+      "escrowFunded": true,
+      "deadline": "2026-10-07",
+      "createdAt": "2026-09-23T08:46:02.120Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-1790153162109-0",
+          "title": "System Architecture & Schema Design",
+          "amount": 30,
+          "status": "approved",
+          "deadline": "2026-09-30",
+          "approvedAt": "2026-09-23T11:26:39.186Z"
+        },
+        {
+          "id": "m-1790153162109-1",
+          "title": "Core Functionality & API Integration",
+          "amount": 40,
+          "status": "approved",
+          "deadline": "2026-10-07",
+          "approvedAt": "2026-09-23T11:26:39.186Z"
+        },
+        {
+          "id": "m-1790153162109-2",
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 30,
+          "status": "approved",
+          "deadline": "2026-10-14",
+          "approvedAt": "2026-09-23T11:26:39.186Z"
+        }
+      ],
+      "deliverables": [],
+      "handoverNotes": "ejcsgdvuohdcw",
+      "clientRating": 5,
+      "clientReview": "Outstanding engineering execution, seamless communication, and on-time milestone delivery!"
+    },
+    {
+      "id": "contract-1790085614268",
+      "gigId": "gig-1790085600144",
+      "gigTitle": "Autonomous Multi-Model Web Agent Platform",
+      "clientId": "client-sarah-jenkins",
+      "clientName": "Sarah Jenkins",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "freelancerId": "freelancer-alex-rivera",
+      "freelancerName": "Alex Rivera",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+      "status": "in_progress",
+      "amount": 7000,
+      "escrowFunded": true,
+      "deadline": "2026-12-15",
+      "createdAt": "2026-09-22T14:00:14.268Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "title": "Phase 1: Agent Architecture & RAG vector store",
+          "amount": 3000
+        },
+        {
+          "title": "Phase 2: Frontend Dashboard & Live Telemetry",
+          "amount": 4000
+        }
+      ],
+      "deliverables": []
+    },
+    {
+      "id": "contract-verify-1790014123552",
+      "gigId": "gig-verify-1790014123215",
+      "gigTitle": "Real-Time Edge Audio Synthesis",
+      "clientId": "client-edge-lab",
+      "clientName": "Sarah Connor",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "freelancerId": "free-audio-dev",
+      "freelancerName": "David Sound",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "status": "in_progress",
+      "amount": 3500,
+      "escrowFunded": true,
+      "deadline": "2026-10-05",
+      "createdAt": "2026-09-21T18:08:43.556Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-1790014123556-0",
+          "title": "Project Deliverable & Handover",
+          "amount": 3500,
+          "status": "in_progress",
+          "deadline": "2026-10-05"
+        }
+      ],
+      "deliverables": []
+    },
+    {
+      "id": "contract-1790012953635",
+      "gigId": "gig-1790012953389",
+      "gigTitle": "Distributed Edge Streaming Engine - 1790012951328",
+      "clientId": "client-edge-node",
+      "clientName": "Edge Systems Inc",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "freelancerId": "freelancer-stream-pro",
+      "freelancerName": "Elena Rostova",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "status": "in_progress",
+      "amount": 8500,
+      "escrowFunded": true,
+      "deadline": "2026-10-05",
+      "createdAt": "2026-09-21T17:49:13.635Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-1790012953635-0",
+          "title": "Project Deliverable & Handover",
+          "amount": 8500,
+          "status": "in_progress",
+          "deadline": "2026-10-05"
+        }
+      ],
+      "deliverables": []
+    },
+    {
+      "id": "contract-1790012574870",
+      "gigId": "gig-102",
+      "gigTitle": "Next.js 15 Full-Stack Fintech Platform with Stripe Escrow",
+      "clientId": "client-2",
+      "clientName": "Marcus Vance",
+      "clientAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "freelancerId": "user-freelancer-2",
+      "freelancerName": "Elena Rostova",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
+      "status": "in_progress",
+      "amount": 2800,
+      "escrowFunded": true,
+      "deadline": "2026-10-05",
+      "createdAt": "2026-09-21T17:42:54.882Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-1790012574870-0",
+          "title": "Design Tokens & Atoms",
+          "amount": 900,
+          "status": "in_progress",
+          "deadline": "2026-09-28"
+        },
+        {
+          "id": "m-1790012574870-1",
+          "title": "Interactive Components & Variants",
+          "amount": 1100,
+          "status": "pending",
+          "deadline": "2026-10-05"
+        },
+        {
+          "id": "m-1790012574870-2",
+          "title": "High-Fidelity Dashboard Prototype",
+          "amount": 800,
+          "status": "pending",
+          "deadline": "2026-10-12"
+        }
+      ],
+      "deliverables": []
+    },
+    {
+      "id": "contract-1790012217295",
+      "gigId": "gig-1790012216935",
+      "gigTitle": "Autonomous Multi-Agent AI Workflow - 1790012216883",
+      "clientId": "client-e2e-1",
+      "clientName": "Alpha Founder",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "freelancerId": "freelancer-e2e-1",
+      "freelancerName": "Beta Engineer",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "status": "in_progress",
+      "amount": 5200,
+      "escrowFunded": true,
+      "deadline": "2026-10-05",
+      "createdAt": "2026-09-21T17:36:57.295Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "title": "Milestone 1: Agent Swarm Architecture",
+          "amount": 2600
+        },
+        {
+          "title": "Milestone 2: Production Deploy & Tooling",
+          "amount": 2600
+        }
+      ],
+      "deliverables": []
+    },
+    {
+      "id": "contract-1790011978211",
+      "gigId": "gig-1790011977906",
+      "gigTitle": "Project Contract",
+      "clientId": "client-verified-99",
+      "clientName": "Enterprise Client",
+      "clientAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "freelancerId": "freelancer-webrtc-1",
+      "freelancerName": "Alex WebRTC",
+      "freelancerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "status": "in_progress",
+      "amount": 6500,
+      "escrowFunded": true,
+      "deadline": "2026-10-05",
+      "createdAt": "2026-09-21T17:32:58.211Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-1790011978212-0",
+          "title": "Project Deliverable & Handover",
+          "amount": 6500,
+          "status": "in_progress",
+          "deadline": "2026-10-05"
+        }
+      ],
+      "deliverables": []
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg-1790011978212",
+      "orderId": "contract-1790011978211",
+      "senderId": "client-verified-99",
+      "senderName": "Enterprise Client",
+      "senderAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "senderRole": "client",
+      "content": "Hello Alex WebRTC! I've accepted your proposal and funded the $6,500 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-21T17:32:58.269Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790011978275-z2oo",
+      "orderId": "contract-1790011978211",
+      "senderId": "client-verified-99",
+      "senderName": "Enterprise Client",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user",
+      "senderRole": "client",
+      "content": "Hello Alex! Escrow is locked. Let us begin.",
+      "attachments": [],
+      "createdAt": "2026-09-21T17:32:58.275Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790012217295",
+      "orderId": "contract-1790012217295",
+      "senderId": "client-e2e-1",
+      "senderName": "Alpha Founder",
+      "senderAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "senderRole": "client",
+      "content": "Hello Beta Engineer! I've accepted your proposal and funded the $5,200 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-21T17:36:57.299Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790012217307-fk3r",
+      "orderId": "contract-1790012217295",
+      "senderId": "client-e2e-1",
+      "senderName": "Alpha Founder",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user",
+      "senderRole": "client",
+      "content": "Hi Beta! Excited to get started. Escrow of ,200 is locked.",
+      "attachments": [],
+      "createdAt": "2026-09-21T17:36:57.308Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790012217315-vskk",
+      "orderId": "contract-1790012217295",
+      "senderId": "freelancer-e2e-1",
+      "senderName": "Beta Engineer",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user",
+      "senderRole": "freelancer",
+      "content": "Thanks Alpha! Beginning work on Milestone 1 agent architecture right now.",
+      "attachments": [],
+      "createdAt": "2026-09-21T17:36:57.315Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790012574882",
+      "orderId": "contract-1790012574870",
+      "senderId": "client-2",
+      "senderName": "Marcus Vance",
+      "senderAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "senderRole": "client",
+      "content": "Hello Elena Rostova! I've accepted your proposal and funded the $2,800 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-21T17:42:54.882Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790012953635",
+      "orderId": "contract-1790012953635",
+      "senderId": "client-edge-node",
+      "senderName": "Edge Systems Inc",
+      "senderAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "senderRole": "client",
+      "content": "Hello Elena Rostova! I've accepted your proposal and funded the $8,500 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-21T17:49:13.635Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790012953645-mdwx",
+      "orderId": "contract-1790012953635",
+      "senderId": "client-edge-node",
+      "senderName": "Edge Systems Inc",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user",
+      "senderRole": "client",
+      "content": "Welcome Elena! Escrow is locked for ,500. Let us build this pipeline.",
+      "attachments": [],
+      "createdAt": "2026-09-21T17:49:13.645Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790012953652-ma96",
+      "orderId": "contract-1790012953635",
+      "senderId": "freelancer-stream-pro",
+      "senderName": "Elena Rostova",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user",
+      "senderRole": "freelancer",
+      "content": "Thank you! I will configure the WebAssembly worker modules now.",
+      "attachments": [],
+      "createdAt": "2026-09-21T17:49:13.652Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790014123556",
+      "orderId": "contract-verify-1790014123552",
+      "senderId": "client-edge-lab",
+      "senderName": "Sarah Connor",
+      "senderAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "senderRole": "client",
+      "content": "Hello David Sound! I've accepted your proposal and funded the $3,500 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-21T18:08:43.596Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790014123601-dzyr",
+      "orderId": "contract-verify-1790014123552",
+      "senderId": "client-edge-lab",
+      "senderName": "Sarah Connor",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user",
+      "senderRole": "client",
+      "content": "Escrow funded! Ready to start.",
+      "attachments": [],
+      "createdAt": "2026-09-21T18:08:43.601Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790085614269",
+      "orderId": "contract-1790085614268",
+      "senderId": "client-sarah-jenkins",
+      "senderName": "Sarah Jenkins",
+      "senderAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "senderRole": "client",
+      "content": "Hello Alex Rivera! I've accepted your proposal and funded the $7,000 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-22T14:00:14.322Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790153162120",
+      "orderId": "contract-1790153162109",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "Hello bose! I've accepted your proposal and funded the $1,050 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-23T08:46:02.190Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790153197461-spvb",
+      "orderId": "contract-1790153162109",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "hi bro",
+      "attachments": [],
+      "createdAt": "2026-09-23T08:46:37.468Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790153223423-yd20",
+      "orderId": "contract-1790153162109",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "sibgighs",
+      "attachments": [],
+      "createdAt": "2026-09-23T08:47:03.463Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790153229745-gjjv",
+      "orderId": "contract-1790153162109",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "hello",
+      "attachments": [],
+      "createdAt": "2026-09-23T08:47:09.751Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790153240627-4km9",
+      "orderId": "contract-1790153162109",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "okay",
+      "attachments": [],
+      "createdAt": "2026-09-23T08:47:20.633Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790153253013",
+      "orderId": "contract-1790153162109",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "🏁 **Final Project Handover Submitted!**\n\"ejcsgdvuohdcw\"\nReady for client final review & escrow completion sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T08:47:33.024Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790153270313",
+      "orderId": "contract-1790153162109",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "🏆 **Contract Successfully Completed & Closed!**\n⭐ Client Rating: 5/5 Stars\n💬 Review: \"Outstanding engineering execution, seamless communication, and on-time milestone delivery!\"\nAll escrow funds have been 100% disbursed. Thank you for the collaboration!",
+      "attachments": [],
+      "createdAt": "2026-09-23T08:47:50.324Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158433740",
+      "orderId": "contract-1790158433731",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "Hello bose! I've accepted your proposal and funded the $2,250 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-23T10:13:53.915Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158556220-xava",
+      "orderId": "contract-1790158433731",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "hjguy",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:15:56.228Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158566629",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: System Architecture & Schema Design\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:16:06.637Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158609917",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: Core Functionality & API Integration\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:16:49.926Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158615464",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: Core Functionality & API Integration\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:16:55.469Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158621584",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: Production Polish, Testing & Deployment\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:17:01.594Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158699202",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: System Architecture & Schema Design\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:18:19.212Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158720838",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: System Architecture & Schema Design\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:18:40.849Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158749386",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: Core Functionality & API Integration\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:19:09.395Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158770043",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "🏁 **Final Project Handover Submitted!**\n\"kj\"\nReady for client final review & escrow completion sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:19:30.051Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158799962",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: System Architecture & Schema Design\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:19:59.971Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158808385",
+      "orderId": "contract-1790158433731",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: Core Functionality & API Integration\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:20:08.395Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790158823971",
+      "orderId": "contract-1790158433731",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "🏆 **Contract Successfully Completed & Closed!**\n⭐ Client Rating: 5/5 Stars\n💬 Review: \"Outstanding engineering execution, seamless communication, and on-time milestone delivery!\"\nAll escrow funds have been 100% disbursed. Thank you for the collaboration!",
+      "attachments": [],
+      "createdAt": "2026-09-23T10:20:23.983Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790163108659",
+      "orderId": "contract-ms-test-1790163108568",
+      "senderId": "client-test",
+      "senderName": "Test Client",
+      "senderAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "senderRole": "client",
+      "content": "Hello Test Freelancer! I've accepted your proposal and funded the $1,500 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-23T11:31:48.723Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790163386430",
+      "orderId": "contract-1790163386402",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "Hello bose! I've accepted your proposal and funded the $4,250 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-23T11:36:26.430Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790163428482",
+      "orderId": "contract-1790163386402",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: System Architecture & Schema Design\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T11:37:08.528Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790163462887",
+      "orderId": "contract-1790163386402",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "🏆 **Contract Successfully Completed & Closed!**\n⭐ Client Rating: 5/5 Stars\n💬 Review: \"Outstanding engineering execution, seamless communication, and on-time milestone delivery!\"\nAll escrow funds have been 100% disbursed. Thank you for the collaboration!",
+      "attachments": [],
+      "createdAt": "2026-09-23T11:37:42.930Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790163586803",
+      "orderId": "contract-1790163586791",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "Hello bose! I've accepted your proposal and funded the $4,250 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-23T11:39:46.803Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790163613739",
+      "orderId": "contract-1790163586791",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: System Architecture & Schema Design\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T11:40:13.747Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790163638389-zyr0",
+      "orderId": "contract-1790163586791",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "hhi",
+      "attachments": [],
+      "createdAt": "2026-09-23T11:40:38.397Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790163731505",
+      "orderId": "contract-1790163586791",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "🏆 **Contract Successfully Completed & Closed!**\n⭐ Client Rating: 5/5 Stars\n💬 Review: \"Outstanding engineering execution, seamless communication, and on-time milestone delivery!\"\nAll escrow funds have been 100% disbursed. Thank you for the collaboration!",
+      "attachments": [],
+      "createdAt": "2026-09-23T11:42:11.514Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790164262350",
+      "orderId": "contract-test-seq-1790164262319",
+      "senderId": "client-seq-1",
+      "senderName": "Enterprise Client",
+      "senderAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "senderRole": "client",
+      "content": "Hello Specialist Freelancer! I've accepted your proposal and funded the $2,250 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-23T11:51:02.350Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790164294425",
+      "orderId": "contract-test-seq-1790164294402",
+      "senderId": "client-seq",
+      "senderName": "Enterprise Client",
+      "senderAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "senderRole": "client",
+      "content": "Hello Professional Freelancer! I've accepted your proposal and funded the $2,250 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-23T11:51:34.425Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790164624154",
+      "orderId": "contract-1790164624146",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "Hello bose! I've accepted your proposal and funded the $4,250 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-23T11:57:04.154Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790164687821",
+      "orderId": "contract-1790164624146",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: System Architecture & Schema Design\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T11:58:07.831Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790164711879",
+      "orderId": "contract-1790164624146",
+      "senderId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderName": "bose",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "senderRole": "freelancer",
+      "content": "🏁 **Final Project Handover Submitted!**\n\"w45yu\"\nReady for client final review & escrow completion sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-23T11:58:31.891Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790164723527",
+      "orderId": "contract-1790164624146",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "🏆 **Contract Successfully Completed & Closed!**\n⭐ Client Rating: 5/5 Stars\n💬 Review: \"Outstanding engineering execution, seamless communication, and on-time milestone delivery!\"\nAll escrow funds have been 100% disbursed. Thank you for the collaboration!",
+      "attachments": [],
+      "createdAt": "2026-09-23T11:58:43.542Z",
+      "isRead": false
+    }
+  ],
+  "verifications": [
+    {
+      "id": "verif-1790162257497",
+      "userId": "5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "userName": "bose",
+      "userEmail": "bose9861@gmail.com",
+      "professionalTitle": "Verified Specialist",
+      "yearsExperience": "5",
+      "status": "rejected",
+      "idType": "passport",
+      "idNumber": "",
+      "portfolioUrl": "",
+      "specialties": [],
+      "idDocumentUrl": "https://documents.freelancestack.dev/verif/passport-scan-encrypted.pdf",
+      "selfieUrl": "https://api.dicebear.com/7.x/bottts/svg?seed=5e4b2d4c-05f8-4350-b10e-8f69687ac8b0",
+      "portfolioFiles": [
+        "https://github.com/freelancestack/demo-showcase",
+        "https://dribbble.com/craft-shots"
+      ],
+      "certificates": [
+        "https://certificates.coursera.org/verified-meta-fullstack.pdf"
+      ],
+      "externalLinks": [
+        "https://linkedin.com/in/freelancer-pro",
+        "https://github.com/freelancestack"
+      ],
+      "skillTags": [
+        "React / Next.js",
+        "TypeScript",
+        "Supabase & PostgreSQL"
+      ],
+      "pitchStatement": "Seasoned full-stack engineer with 5+ years building scalable SaaS web applications with high security and testing standards.",
+      "submittedAt": "2026-09-23T11:17:37.503Z",
+      "adminComment": "Verification requirements not met.",
+      "reviewedAt": "2026-09-23T11:17:56.893Z"
+    },
+    {
+      "id": "verif-1790085614333",
+      "userId": "freelancer-devon-lane",
+      "userName": "Applicant",
+      "userEmail": "devon@lane-consulting.tech",
+      "professionalTitle": "Principal Cloud Architect",
+      "yearsExperience": "10",
+      "status": "approved",
+      "idType": "national_id",
+      "idNumber": "ID-99218274",
+      "portfolioUrl": "https://devonlane.tech",
+      "specialties": [
+        "Kubernetes",
+        "High Availability",
+        "Security Governance"
+      ],
+      "idDocumentUrl": "https://documents.freelancestack.dev/verif/doc.pdf",
+      "selfieUrl": "https://api.dicebear.com/7.x/bottts/svg?seed=verified",
+      "portfolioFiles": [],
+      "certificates": [],
+      "externalLinks": [],
+      "skillTags": [],
+      "pitchStatement": "Certified CKA / AWS Solutions Architect with a track record of deploying multi-region Kubernetes clusters.",
+      "submittedAt": "2026-09-22T14:00:14.333Z",
+      "adminComment": "Credentials, government ID, and portfolio verified by Platform Admin.",
+      "reviewedAt": "2026-09-22T14:00:14.338Z"
+    },
+    {
+      "id": "verif-1790083458424",
+      "userId": "user-freelancer-alex",
+      "userName": "Applicant",
+      "userEmail": "applicant@example.com",
+      "professionalTitle": "Software Engineer",
+      "yearsExperience": "8",
+      "status": "approved",
+      "idType": "passport",
+      "idNumber": "PA987654321",
+      "portfolioUrl": "https://github.com/alexrivera-ai",
+      "specialties": [
+        "AI Agents",
+        "TypeScript",
+        "Vector Databases"
+      ],
+      "idDocumentUrl": "https://documents.freelancestack.dev/verif/doc.pdf",
+      "selfieUrl": "https://api.dicebear.com/7.x/bottts/svg?seed=verified",
+      "portfolioFiles": [],
+      "certificates": [],
+      "externalLinks": [],
+      "skillTags": [],
+      "pitchStatement": "",
+      "submittedAt": "2026-09-22T13:24:18.424Z",
+      "adminComment": "Verified GitHub credentials and official ID.",
+      "reviewedAt": "2026-09-22T13:24:18.433Z"
+    },
+    {
+      "id": "verif-1",
+      "userId": "user-freelancer-2",
+      "userName": "Elena Rostova",
+      "userEmail": "elena.rostova@designcraft.io",
+      "professionalTitle": "Senior UI/UX & Design Systems Lead",
+      "yearsExperience": "6",
+      "status": "pending",
+      "idDocumentUrl": "https://documents.freelancestack.dev/verif/elena-passport-redacted.pdf",
+      "selfieUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
+      "portfolioFiles": [
+        "https://dribbble.com/elenarostova-fintech",
+        "https://figma.com/@elena_design_tokens"
+      ],
+      "certificates": [
+        "https://certificates.coursera.org/google-ux-master-elena.pdf"
+      ],
+      "externalLinks": [
+        "https://linkedin.com/in/elena-rostova-design",
+        "https://github.com/elena-design-tokens"
+      ],
+      "skillTags": [
+        "UI/UX Design",
+        "Design Systems",
+        "Figma",
+        "WCAG AAA",
+        "Micro-Animations"
+      ],
+      "pitchStatement": "I have spent 6 years crafting conversion-optimized SaaS products for European fintechs. My design system blueprints reduce developer handoff time by 40%.",
+      "submittedAt": "2026-09-19T12:56:25.288Z"
+    },
+    {
+      "id": "verif-2",
+      "userId": "user-freelancer-3",
+      "userName": "Devon Wright",
+      "userEmail": "devon.wright@cloudforge.tech",
+      "professionalTitle": "AWS Certified Solutions Architect",
+      "yearsExperience": "8",
+      "status": "under_review",
+      "idDocumentUrl": "https://documents.freelancestack.dev/verif/devon-id.pdf",
+      "selfieUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
+      "portfolioFiles": [
+        "https://github.com/devon-wright/terraform-multi-cloud"
+      ],
+      "certificates": [
+        "https://aws.amazon.com/verification/AWS-PSA-88291.pdf"
+      ],
+      "externalLinks": [
+        "https://linkedin.com/in/devon-wright-aws"
+      ],
+      "skillTags": [
+        "AWS",
+        "Kubernetes",
+        "Terraform",
+        "CI/CD",
+        "Security"
+      ],
+      "pitchStatement": "Certified solutions architect with 8+ years enterprise cloud scaling experience. Built multi-region failover for banking clients handling 15k RPS.",
+      "submittedAt": "2026-09-18T12:56:25.288Z"
+    }
+  ]
+}
