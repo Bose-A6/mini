@@ -14,7 +14,21 @@ import {
   Award,
   Check,
   UploadCloud,
+  QrCode,
+  CreditCard,
+  Receipt,
+  Camera,
+  LifeBuoy,
+  Sparkles,
+  XCircle,
+  X,
 } from 'lucide-react';
+import type { Milestone } from '../../types';
+import {
+  FreelancerPaymentModal,
+  ClientPaymentModal,
+  PaymentProofLightbox,
+} from './PaymentComponents';
 
 export const ContractWorkspace: React.FC = () => {
   const {
@@ -25,18 +39,42 @@ export const ContractWorkspace: React.FC = () => {
     setSelectedContractId,
     submitDeliverable,
     approveMilestoneAndReleaseEscrow,
+    updateFreelancerPaymentDetails,
+    submitMilestonePaymentProof,
+    confirmMilestonePayment,
+    acceptContractOffer,
+    declineContractOffer,
+    cancelContractOffer,
     requestRevision,
     markWorkHandoverComplete,
     completeContract,
     sendMessage,
+    openSupportModal,
+    openInvoiceModal,
+    getCollaborationBetween,
     setActiveView,
     addToast,
   } = useApp();
 
-  const contract = (contracts || []).find((c) => c.id === selectedContractId) || contracts[0];
+  const userContracts = (contracts || []).filter((c) => {
+    if (!currentUser) return true;
+    if (currentUser.role === 'admin') return true;
+    return String(c.clientId).trim() === String(currentUser.id).trim() || String(c.freelancerId).trim() === String(currentUser.id).trim();
+  });
+
+  const contract = (contracts || []).find((c) => c.id === selectedContractId) || userContracts[0] || null;
   const [chatInput, setChatInput] = useState('');
   const [revisionModalMilestoneId, setRevisionModalMilestoneId] = useState<string | null>(null);
   const [revisionReason, setRevisionReason] = useState('');
+
+  // Decline Offer Modal State
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [declineReasonText, setDeclineReasonText] = useState('');
+
+  // Payment modal states
+  const [freelancerPaymentModalMilestone, setFreelancerPaymentModalMilestone] = useState<Milestone | null>(null);
+  const [clientPaymentModalMilestone, setClientPaymentModalMilestone] = useState<Milestone | null>(null);
+  const [proofLightboxMilestone, setProofLightboxMilestone] = useState<Milestone | null>(null);
 
   // Milestone deliverable submission modal (Freelancer)
   const [deliverableModalMilestoneId, setDeliverableModalMilestoneId] = useState<string | null>(null);
@@ -144,9 +182,11 @@ export const ContractWorkspace: React.FC = () => {
   };
 
   const isContractCompleted = contract.status === 'completed';
+  const totalMilestonesCount = (contract.milestones || []).length;
   const approvedMilestonesCount = isContractCompleted
-    ? (contract.milestones || []).length
+    ? totalMilestonesCount
     : (contract.milestones || []).filter((m) => m.status === 'approved').length;
+  const allMilestonesApproved = totalMilestonesCount > 0 && approvedMilestonesCount === totalMilestonesCount;
   const approvedTotal = isContractCompleted
     ? contract.amount
     : (contract.milestones || [])
@@ -181,12 +221,16 @@ export const ContractWorkspace: React.FC = () => {
                     ? 'rgba(16, 185, 129, 0.2)'
                     : contract.status === 'delivered'
                     ? 'rgba(6, 182, 212, 0.2)'
+                    : contract.status === 'pending_acceptance'
+                    ? 'rgba(245, 158, 11, 0.2)'
                     : 'rgba(99, 102, 241, 0.2)',
                 color:
                   contract.status === 'completed'
                     ? 'var(--accent-emerald)'
                     : contract.status === 'delivered'
                     ? 'var(--accent-cyan)'
+                    : contract.status === 'pending_acceptance'
+                    ? 'var(--accent-amber)'
                     : '#c7d2fe',
                 fontWeight: 800,
                 border:
@@ -194,10 +238,12 @@ export const ContractWorkspace: React.FC = () => {
                     ? '1px solid rgba(16, 185, 129, 0.4)'
                     : contract.status === 'delivered'
                     ? '1px solid rgba(6, 182, 212, 0.4)'
+                    : contract.status === 'pending_acceptance'
+                    ? '1px solid rgba(245, 158, 11, 0.4)'
                     : '1px solid rgba(99, 102, 241, 0.4)',
               }}
             >
-              STATUS: {contract.status.toUpperCase()}
+              STATUS: {contract.status === 'pending_acceptance' ? 'PENDING ACCEPTANCE' : contract.status.toUpperCase()}
             </span>
           </div>
           <h2>{contract.gigTitle}</h2>
@@ -215,27 +261,309 @@ export const ContractWorkspace: React.FC = () => {
             >
               {contracts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.gigTitle.slice(0, 32)}... (${c.amount}) [{c.status.toUpperCase()}]
+                  {c.gigTitle.slice(0, 32)}... (${c.amount}) [{c.status === 'pending_acceptance' ? 'OFFER PENDING' : c.status.toUpperCase()}]
                 </option>
               ))}
             </select>
           )}
 
+          {/* Official Tax Invoice & Receipt Modal button */}
+          <button
+            className="btn-secondary"
+            onClick={() => openInvoiceModal(contract.id)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1px solid rgba(99, 102, 241, 0.4)',
+              color: '#c7d2fe',
+              background: 'rgba(99, 102, 241, 0.1)',
+            }}
+            title="View, print, and export official tax invoice & escrow settlement receipt"
+          >
+            <Receipt size={16} color="var(--accent-cyan)" />
+            <span>Invoice & Receipt</span>
+          </button>
+
+          {/* Quick Support / Mediation button */}
+          <button
+            className="btn-secondary"
+            onClick={() => openSupportModal()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              color: 'var(--accent-amber)',
+            }}
+            title="Raise a query or dispute regarding this contract to Admin Support"
+          >
+            <LifeBuoy size={16} />
+            <span>Mediation & Doubts</span>
+          </button>
+
           {/* Quick Handover button for Freelancer */}
-          {contract.status !== 'completed' && isFreelancer && (
+          {contract.status !== 'completed' && contract.status !== 'pending_acceptance' && isFreelancer && (
             <button className="btn-primary" onClick={() => setShowHandoverModal(true)}>
               <Award size={16} /> Submit Final Handover
             </button>
           )}
 
-          {/* Quick Complete Contract button for Client */}
-          {contract.status !== 'completed' && isClient && (
-            <button className="btn-success" onClick={() => setShowCompleteModal(true)}>
-              <CheckCircle2 size={16} /> Accept Work & Complete Contract
+          {/* Complete Contract button for Client - strictly locked until all individual milestone escrows are approved */}
+          {contract.status !== 'completed' && contract.status !== 'pending_acceptance' && isClient && (
+            <button
+              className={allMilestonesApproved ? "btn-success" : "btn-secondary"}
+              onClick={() => {
+                if (allMilestonesApproved) {
+                  setShowCompleteModal(true);
+                } else {
+                  addToast(
+                    'warning',
+                    'Escrows Incomplete',
+                    `Please approve and release escrow for all ${totalMilestonesCount} milestones individually before final sign-off (${approvedMilestonesCount}/${totalMilestonesCount} escrows released).`
+                  );
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: allMilestonesApproved ? 1 : 0.7,
+                cursor: allMilestonesApproved ? 'pointer' : 'not-allowed',
+                border: allMilestonesApproved ? 'none' : '1px solid rgba(245, 158, 11, 0.4)',
+                background: allMilestonesApproved ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(245, 158, 11, 0.1)',
+                color: allMilestonesApproved ? '#ffffff' : 'var(--accent-amber)',
+              }}
+              title={
+                allMilestonesApproved
+                  ? "All milestone escrows released! Click to give final review & close contract."
+                  : `Locked: ${approvedMilestonesCount}/${totalMilestonesCount} escrows released. Please release all milestone escrows individually.`
+              }
+            >
+              <CheckCircle2 size={16} color={allMilestonesApproved ? '#ffffff' : 'var(--accent-amber)'} />
+              <span>Accept Work & Complete Contract</span>
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  padding: '2px 7px',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  background: allMilestonesApproved ? 'rgba(255,255,255,0.25)' : 'rgba(245, 158, 11, 0.25)',
+                  color: allMilestonesApproved ? '#ffffff' : 'var(--accent-amber)',
+                }}
+              >
+                {approvedMilestonesCount}/{totalMilestonesCount} Escrows
+              </span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Repeat Collaboration Domain Banner if they worked together */}
+      {(() => {
+        const repeatCollab = getCollaborationBetween(contract.clientId, contract.freelancerId, contract.categoryName);
+        if (!repeatCollab) return null;
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 18px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.12))',
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+              marginBottom: '20px',
+              fontSize: '0.84rem',
+              color: 'var(--text-primary)',
+              flexWrap: 'wrap',
+              gap: '10px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(16, 185, 129, 0.25)',
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: 'var(--accent-emerald)',
+                }}
+              >
+                <Sparkles size={16} />
+              </div>
+              <div>
+                <strong style={{ color: 'var(--accent-emerald)', display: 'block' }}>
+                  🌟 Trusted Domain Collaboration: {repeatCollab.domain}
+                </strong>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                  {contract.clientName} and {contract.freelancerName} have successfully completed {repeatCollab.completedContractsCount} previous project(s) (${repeatCollab.totalAmount.toLocaleString()} total settled).
+                </span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  fontSize: '0.74rem',
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'rgba(6, 182, 212, 0.2)',
+                  color: 'var(--accent-cyan)',
+                  fontWeight: 700,
+                }}
+              >
+                100% On-Time Delivery Track Record
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Mutual Agreement / Pending Acceptance Hero Banner */}
+      {contract.status === 'pending_acceptance' && (
+        <div
+          className="glass-panel"
+          style={{
+            padding: '24px 28px',
+            marginBottom: '24px',
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(16, 185, 129, 0.1))',
+            border: '1px solid rgba(99, 102, 241, 0.45)',
+            borderRadius: '16px',
+            boxShadow: '0 12px 35px rgba(0,0,0,0.45)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+            <div style={{ flex: 1, minWidth: '280px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'rgba(245, 158, 11, 0.2)',
+                    color: 'var(--accent-amber)',
+                    fontWeight: 800,
+                    border: '1px solid rgba(245, 158, 11, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Clock size={13} /> PENDING MUTUAL ACCEPTANCE
+                </span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Two-Way Consent Required
+                </span>
+              </div>
+
+              <h3 style={{ fontSize: '1.35rem', margin: '0 0 8px', color: 'var(--text-primary)' }}>
+                {isFreelancer ? `Direct Work Offer from ${contract.clientName}` : `Waiting for ${contract.freelancerName} to Accept`}
+              </h3>
+
+              <p style={{ margin: '0 0 14px', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                {isFreelancer ? (
+                  <>
+                    The client has assigned this contract to you with <strong>${contract.amount.toLocaleString()} USD</strong> deposited into the platform escrow vault. Please review the deliverable milestones and deadline below before agreeing to begin work.
+                  </>
+                ) : (
+                  <>
+                    Your direct contract offer and <strong>${contract.amount.toLocaleString()} USD</strong> escrow funding have been sent to <strong>{contract.freelancerName}</strong>. Milestones will activate as soon as the specialist accepts the terms.
+                  </>
+                )}
+              </p>
+
+              {(contract.invitationNote || contract.handoverNotes) && (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid var(--border-subtle)',
+                    marginBottom: '14px',
+                    fontSize: '0.85rem',
+                    color: '#e2e8f0',
+                  }}
+                >
+                  <strong style={{ color: 'var(--accent-cyan)', display: 'block', marginBottom: '4px' }}>
+                    Client's Collaboration Brief & Scope:
+                  </strong>
+                  {contract.invitationNote || contract.handoverNotes}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                <span>🎯 Domain: <strong style={{ color: '#cbd5e1' }}>{contract.categoryName || 'Engineering'}</strong></span>
+                <span>📅 Target Delivery: <strong style={{ color: '#cbd5e1' }}>{contract.deadline}</strong></span>
+                <span>🔒 Escrow Status: <strong style={{ color: 'var(--accent-emerald)' }}>100% Vault Funded (${contract.amount.toLocaleString()})</strong></span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '220px' }}>
+              {isFreelancer && (
+                <>
+                  <button
+                    className="btn-primary"
+                    onClick={() => acceptContractOffer(contract.id)}
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      padding: '12px 20px',
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      boxShadow: '0 0 20px rgba(16, 185, 129, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <CheckCircle2 size={18} /> Accept & Start Work
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => setShowDeclineModal(true)}
+                    style={{
+                      borderColor: 'rgba(239, 68, 68, 0.4)',
+                      color: 'var(--accent-rose)',
+                      background: 'rgba(239, 68, 68, 0.08)',
+                      padding: '10px 16px',
+                      fontSize: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <XCircle size={16} /> Decline Offer
+                  </button>
+                </>
+              )}
+
+              {isClient && (
+                <button
+                  className="btn-secondary"
+                  onClick={() => cancelContractOffer(contract.id)}
+                  style={{
+                    borderColor: 'rgba(239, 68, 68, 0.4)',
+                    color: 'var(--accent-rose)',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    padding: '10px 16px',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <XCircle size={16} /> Withdraw Offer
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Completion Banner if Completed */}
       {contract.status === 'completed' && (
@@ -364,6 +692,8 @@ export const ContractWorkspace: React.FC = () => {
                 const isApproved = m.status === 'approved' || isContractCompleted;
                 const isSubmitted = m.status === 'submitted' && !isContractCompleted;
                 const displayStatus = isApproved ? 'APPROVED' : (m.status || 'PENDING').toUpperCase();
+                const hasPaymentProof = Boolean(m.paymentProof?.proofUrl || m.paymentStatus === 'proof_submitted');
+                const hasPaymentDetails = Boolean(m.paymentDetails?.upiId || contract.upiId);
 
                 return (
                   <div
@@ -405,83 +735,316 @@ export const ContractWorkspace: React.FC = () => {
                       </strong>
                     </div>
 
-                  {m.deliverableNote && (
-                    <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: 'rgba(0, 0, 0, 0.25)', border: '1px solid var(--border-subtle)', marginTop: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', fontSize: '0.8rem', color: 'var(--accent-cyan)' }}>
-                        <Clock size={12} />
-                        <span>Submitted Deliverable Notes:</span>
+                    {/* Deliverable Notes */}
+                    {m.deliverableNote && (
+                      <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: 'rgba(0, 0, 0, 0.25)', border: '1px solid var(--border-subtle)', marginTop: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', fontSize: '0.8rem', color: 'var(--accent-cyan)' }}>
+                          <Clock size={12} />
+                          <span>Submitted Deliverable Notes:</span>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: '#cbd5e1', margin: 0, lineHeight: 1.4 }}>
+                          {m.deliverableNote}
+                        </p>
+                        {m.deliverableFiles && m.deliverableFiles.length > 0 && (
+                          <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {m.deliverableFiles.map((file, fIdx) => (
+                              <a
+                                key={fIdx}
+                                href={file}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '0.75rem',
+                                  padding: '4px 8px',
+                                  borderRadius: 4,
+                                  background: 'rgba(255, 255, 255, 0.05)',
+                                  color: 'var(--accent-cyan)',
+                                }}
+                              >
+                                <ExternalLink size={12} /> Live Link / Archive
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <p style={{ fontSize: '0.85rem', color: '#cbd5e1', margin: 0, lineHeight: 1.4 }}>
-                        {m.deliverableNote}
-                      </p>
-                      {m.deliverableFiles && m.deliverableFiles.length > 0 && (
-                        <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          {m.deliverableFiles.map((file, fIdx) => (
-                            <a
-                              key={fIdx}
-                              href={file}
-                              target="_blank"
-                              rel="noreferrer"
+                    )}
+
+                    {/* Payment & Payout Details Strip */}
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        background: isApproved
+                          ? 'rgba(16, 185, 129, 0.08)'
+                          : hasPaymentProof
+                          ? 'rgba(6, 182, 212, 0.08)'
+                          : 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid var(--border-subtle)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '8px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CreditCard size={15} color={isApproved ? 'var(--accent-emerald)' : 'var(--accent-cyan)'} />
+                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            UPI & Payout:
+                          </span>
+                        </div>
+
+                        {hasPaymentDetails ? (
+                          <span style={{ fontSize: '0.78rem', color: '#cbd5e1', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <code>{m.paymentDetails?.upiId || contract.upiId || 'baca@oksbi'}</code>
+                            {(m.paymentDetails?.phoneNumber || contract.phoneNumber) && (
+                              <span style={{ color: 'var(--text-muted)' }}>• {m.paymentDetails?.phoneNumber || contract.phoneNumber}</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            No UPI ID provided yet
+                          </span>
+                        )}
+
+                        {hasPaymentProof && (
+                          <button
+                            type="button"
+                            onClick={() => setProofLightboxMilestone(m)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              background: 'rgba(6, 182, 212, 0.2)',
+                              color: 'var(--accent-cyan)',
+                              border: '1px solid rgba(6, 182, 212, 0.4)',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <Camera size={12} /> View Proof Screenshot
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Payment Quick Actions */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {isFreelancer && contract.status !== 'completed' && (
+                          <button
+                            type="button"
+                            onClick={() => setFreelancerPaymentModalMilestone(m)}
+                            style={{
+                              background: 'rgba(99, 102, 241, 0.15)',
+                              color: '#c7d2fe',
+                              border: '1px solid rgba(99, 102, 241, 0.3)',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              fontSize: '0.74rem',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <QrCode size={12} /> {hasPaymentDetails ? 'Edit UPI/QR' : 'Share UPI & QR'}
+                          </button>
+                        )}
+
+                        {isClient && contract.status !== 'completed' && !isApproved && (
+                          isSubmitted ? (
+                            <button
+                              type="button"
+                              onClick={() => setClientPaymentModalMilestone(m)}
                               style={{
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                color: '#a7f3d0',
+                                border: '1px solid rgba(16, 185, 129, 0.4)',
+                                borderRadius: '6px',
+                                padding: '4px 10px',
+                                fontSize: '0.74rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '4px',
-                                fontSize: '0.75rem',
-                                padding: '4px 8px',
-                                borderRadius: 4,
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                color: 'var(--accent-cyan)',
                               }}
                             >
-                              <ExternalLink size={12} /> Live Link / Archive
-                            </a>
-                          ))}
+                              <QrCode size={12} /> Pay via UPI & Proof
+                            </button>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: '0.72rem',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid var(--border-subtle)',
+                                color: 'var(--text-muted)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              title="Escrow release unlocks only after the freelancer submits deliverable work for this milestone."
+                            >
+                              🔒 Awaiting Deliverable Submission
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions for Freelancer on Active In-Progress Milestone */}
+                    {m.status === 'in_progress' && isFreelancer && contract.status !== 'completed' && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
+                        <button
+                          className="btn-primary"
+                          style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                          onClick={() => {
+                            setDeliverableModalMilestoneId(m.id);
+                            setDeliverableTitle(`Deliverable for: ${m.title}`);
+                            setDeliverableDesc('All requirements implemented and verified. Ready for milestone sign-off.');
+                          }}
+                        >
+                          <UploadCloud size={14} /> Submit Milestone Deliverable
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Indicator for Client on In-Progress Milestone (Awaiting Freelancer Deliverable) */}
+                    {m.status === 'in_progress' && isClient && !isFreelancer && contract.status !== 'completed' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(245, 158, 11, 0.04)', padding: '8px 12px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.18)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--accent-amber)' }}>
+                          <Clock size={14} />
+                          <span>Specialist is currently developing deliverables for Phase {idx + 1}.</span>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                          🔒 Escrow Release Unlocks on Delivery
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Actions for Freelancer on Active Milestone */}
-                  {(m.status === 'in_progress' || m.status === 'pending') && isFreelancer && contract.status !== 'completed' && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
-                      <button
-                        className="btn-primary"
-                        style={{ padding: '6px 14px', fontSize: '0.82rem' }}
-                        onClick={() => {
-                          setDeliverableModalMilestoneId(m.id);
-                          setDeliverableTitle(`Deliverable for: ${m.title}`);
-                          setDeliverableDesc('All requirements implemented and verified. Ready for milestone sign-off.');
-                        }}
-                      >
-                        <UploadCloud size={14} /> Submit Milestone Deliverable
-                      </button>
-                    </div>
-                  )}
+                    {/* Indicator for Freelancer on Pending Milestone */}
+                    {m.status === 'pending' && isFreelancer && contract.status !== 'completed' && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          🔒 Unlocks after previous milestone approval
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Actions for Client on Submitted Milestone */}
-                  {m.status === 'submitted' && isClient && contract.status !== 'completed' && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
-                      <button
-                        className="btn-secondary"
-                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                        onClick={() => setRevisionModalMilestoneId(m.id)}
-                      >
-                        <RotateCcw size={14} /> Request Revision
-                      </button>
+                    {/* Indicator for Client on Pending Milestone */}
+                    {m.status === 'pending' && isClient && !isFreelancer && contract.status !== 'completed' && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          🔒 Phase {idx + 1} Locked • Unlocks sequentially after previous milestone approval
+                        </span>
+                      </div>
+                    )}
 
-                      <button
-                        className="btn-success"
-                        style={{ padding: '6px 14px', fontSize: '0.8rem' }}
-                        onClick={() => handleApproveMilestone(m.id)}
-                      >
-                        <CheckCircle2 size={14} /> Approve & Release Escrow (${m.amount.toLocaleString()})
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-              </div>
+                    {/* Indicator for Freelancer when Milestone is Submitted */}
+                    {m.status === 'submitted' && isFreelancer && !isClient && contract.status !== 'completed' && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--accent-cyan)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          ⏳ Deliverable Submitted • Awaiting Client Review & Escrow Release
+                        </span>
+
+                        {hasPaymentProof && m.paymentStatus !== 'settled' && (
+                          <button
+                            type="button"
+                            className="btn-success"
+                            style={{ padding: '5px 12px', fontSize: '0.78rem' }}
+                            onClick={() => confirmMilestonePayment(contract.id, m.id)}
+                          >
+                            <CheckCircle2 size={13} /> Confirm Payment Received ✅
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Actions for Client on Submitted Milestone */}
+                    {m.status === 'submitted' && isClient && contract.status !== 'completed' && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                          onClick={() => setRevisionModalMilestoneId(m.id)}
+                        >
+                          <RotateCcw size={14} /> Request Revision
+                        </button>
+
+                        {!hasPaymentProof ? (
+                          <button
+                            className="btn-success"
+                            style={{
+                              padding: '6px 16px',
+                              fontSize: '0.82rem',
+                              background: 'linear-gradient(135deg, #10b981, #059669)',
+                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.25)',
+                            }}
+                            onClick={() => setClientPaymentModalMilestone(m)}
+                          >
+                            <QrCode size={14} /> Attach Payment Proof & Release Escrow (${m.amount.toLocaleString()})
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className="btn-primary"
+                              style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                              onClick={() => setClientPaymentModalMilestone(m)}
+                            >
+                              <Camera size={14} /> Update Proof
+                            </button>
+
+                            <button
+                              className="btn-success"
+                              style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+                              onClick={() => handleApproveMilestone(m.id)}
+                            >
+                              <CheckCircle2 size={14} /> Approve & Release Escrow (${m.amount.toLocaleString()})
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Approved Milestone Tag */}
+                    {isApproved && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
+                        {hasPaymentProof && (
+                          <button
+                            type="button"
+                            onClick={() => setProofLightboxMilestone(m)}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'var(--accent-cyan)',
+                              fontSize: '0.78rem',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <Receipt size={14} /> View Receipt
+                          </button>
+                        )}
+                        <span style={{ fontSize: '0.82rem', color: 'var(--accent-emerald)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle2 size={14} /> Escrow Released & Settled (${m.amount.toLocaleString()})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -535,6 +1098,29 @@ export const ContractWorkspace: React.FC = () => {
                       }}
                     >
                       {msg.content}
+
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {msg.attachments.map((att, attIdx) => (
+                            <div
+                              key={attIdx}
+                              style={{
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                maxWidth: '240px',
+                                background: 'rgba(0, 0, 0, 0.4)',
+                              }}
+                            >
+                              <img
+                                src={att}
+                                alt="Attachment"
+                                style={{ width: '100%', maxHeight: '150px', objectFit: 'cover', display: 'block' }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -557,6 +1143,51 @@ export const ContractWorkspace: React.FC = () => {
           </form>
         </div>
       </div>
+
+      {/* Freelancer Payment Details (UPI/QR) Modal */}
+      {freelancerPaymentModalMilestone && (
+        <FreelancerPaymentModal
+          milestone={freelancerPaymentModalMilestone}
+          contractId={contract.id}
+          contractFreelancerName={contract.freelancerName}
+          initialDetails={freelancerPaymentModalMilestone.paymentDetails || (contract.upiId ? { upiId: contract.upiId, phoneNumber: contract.phoneNumber, qrCodeUrl: contract.qrCodeUrl } : undefined)}
+          onSave={(details) => {
+            updateFreelancerPaymentDetails(contract.id, freelancerPaymentModalMilestone.id, details);
+          }}
+          onClose={() => setFreelancerPaymentModalMilestone(null)}
+        />
+      )}
+
+      {/* Client UPI Payment & Proof Upload Modal */}
+      {clientPaymentModalMilestone && (
+        <ClientPaymentModal
+          milestone={clientPaymentModalMilestone}
+          contractId={contract.id}
+          freelancerName={contract.freelancerName}
+          freelancerAvatar={contract.freelancerAvatar}
+          initialDetails={clientPaymentModalMilestone.paymentDetails || (contract.upiId ? { upiId: contract.upiId, phoneNumber: contract.phoneNumber, qrCodeUrl: contract.qrCodeUrl } : undefined)}
+          onSubmitProof={(proof, andApprove) => {
+            if (andApprove) {
+              approveMilestoneAndReleaseEscrow(contract.id, clientPaymentModalMilestone.id, proof);
+            } else {
+              submitMilestonePaymentProof(contract.id, clientPaymentModalMilestone.id, proof);
+            }
+          }}
+          onClose={() => setClientPaymentModalMilestone(null)}
+        />
+      )}
+
+      {/* Payment Proof Lightbox Modal */}
+      {proofLightboxMilestone && (
+        <PaymentProofLightbox
+          milestone={proofLightboxMilestone}
+          isFreelancer={isFreelancer}
+          onConfirmReceipt={() => {
+            confirmMilestonePayment(contract.id, proofLightboxMilestone.id);
+          }}
+          onClose={() => setProofLightboxMilestone(null)}
+        />
+      )}
 
       {/* Deliverable Submission Modal (Freelancer) */}
       {deliverableModalMilestoneId && (
@@ -713,13 +1344,114 @@ export const ContractWorkspace: React.FC = () => {
       {/* Complete Contract & Review Modal (Client) */}
       {showCompleteModal && (
         <div className="modal-overlay" onClick={() => setShowCompleteModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '550px' }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '580px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <CheckCircle2 size={24} color="var(--accent-emerald)" />
+              <CheckCircle2 size={24} color={allMilestonesApproved ? "var(--accent-emerald)" : "var(--accent-amber)"} />
               <h3 style={{ fontSize: '1.3rem' }}>Final Sign-off & Complete Contract</h3>
             </div>
+
+            {/* Milestones Verification Checklist */}
+            <div
+              style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '18px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Milestone Escrow Status ({approvedMilestonesCount}/{totalMilestonesCount} Settled)
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    padding: '3px 8px',
+                    borderRadius: 'var(--radius-full)',
+                    background: allMilestonesApproved ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                    color: allMilestonesApproved ? 'var(--accent-emerald)' : 'var(--accent-amber)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {allMilestonesApproved ? 'ALL ESCROWS RELEASED ✅' : `${totalMilestonesCount - approvedMilestonesCount} ESCROW(S) PENDING ⏳`}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {(contract.milestones || []).map((m, idx) => {
+                  const isMApproved = m.status === 'approved';
+                  return (
+                    <div
+                      key={m.id || idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        background: isMApproved ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+                        border: isMApproved ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(245, 158, 11, 0.3)',
+                        fontSize: '0.84rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {isMApproved ? (
+                          <CheckCircle2 size={16} color="var(--accent-emerald)" />
+                        ) : (
+                          <Clock size={16} color="var(--accent-amber)" />
+                        )}
+                        <span style={{ color: isMApproved ? '#e2e8f0' : 'var(--text-secondary)' }}>
+                          Phase {idx + 1}: {m.title}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <strong style={{ color: isMApproved ? 'var(--accent-emerald)' : 'var(--accent-amber)' }}>
+                          ${m.amount.toLocaleString()}
+                        </strong>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            background: isMApproved ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                            color: isMApproved ? 'var(--accent-emerald)' : 'var(--accent-amber)',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {isMApproved ? 'Approved & Paid' : (m.status || 'Pending').toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {!allMilestonesApproved && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    fontSize: '0.82rem',
+                    color: '#fca5a5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <XCircle size={16} color="var(--accent-rose)" />
+                  <span>
+                    Each milestone escrow must be submitted and approved individually in the workspace before final sign-off.
+                  </span>
+                </div>
+              )}
+            </div>
+
             <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '18px' }}>
-              Confirming completion will approve all remaining milestones, disburse 100% of escrow to <strong>{contract.freelancerName}</strong>, and close the contract.
+              Confirming completion will record your official rating & public testimonial for <strong>{contract.freelancerName}</strong> and complete the contract.
             </p>
 
             <form onSubmit={handleCompleteContract}>
@@ -766,8 +1498,94 @@ export const ContractWorkspace: React.FC = () => {
                 <button type="button" className="btn-secondary" onClick={() => setShowCompleteModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-success">
-                  <CheckCircle2 size={16} /> Sign Off & Disburse Escrow
+                <button
+                  type="submit"
+                  className="btn-success"
+                  disabled={!allMilestonesApproved}
+                  style={{
+                    opacity: allMilestonesApproved ? 1 : 0.5,
+                    cursor: allMilestonesApproved ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <CheckCircle2 size={16} />
+                  <span>
+                    {allMilestonesApproved
+                      ? 'Sign Off & Complete Contract'
+                      : `Sign Off Locked (${approvedMilestonesCount}/${totalMilestonesCount} Escrows)`}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Offer Modal (Freelancer) */}
+      {showDeclineModal && (
+        <div className="modal-overlay" onClick={() => setShowDeclineModal(false)} style={{ zIndex: 1200 }}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '480px',
+              background: '#0f172a',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              borderRadius: '16px',
+              padding: '24px',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.8), 0 0 30px rgba(239, 68, 68, 0.15)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <XCircle size={22} color="var(--accent-rose)" />
+                <h3 style={{ fontSize: '1.2rem', margin: 0 }}>Decline Contract Offer</h3>
+              </div>
+              <button
+                onClick={() => setShowDeclineModal(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
+              Declining will cancel this contract invitation and immediately refund the vaulted escrow of <strong>${contract.amount.toLocaleString()} USD</strong> to <strong>{contract.clientName}</strong>.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                declineContractOffer(contract.id, declineReasonText.trim() || undefined);
+                setShowDeclineModal(false);
+                setDeclineReasonText('');
+              }}
+            >
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  REASON FOR DECLINING (OPTIONAL)
+                </label>
+                <textarea
+                  rows={3}
+                  value={declineReasonText}
+                  onChange={(e) => setDeclineReasonText(e.target.value)}
+                  placeholder="e.g. Current capacity is full, or milestone budget requires adjustment..."
+                  style={{ width: '100%', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowDeclineModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ background: 'var(--accent-rose)', borderColor: 'var(--accent-rose)' }}
+                >
+                  Confirm & Decline Offer
                 </button>
               </div>
             </form>

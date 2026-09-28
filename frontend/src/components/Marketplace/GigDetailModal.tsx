@@ -9,12 +9,14 @@ import {
   FileText,
   Users,
   ShieldCheck,
+  Lock,
 } from 'lucide-react';
 
 export const GigDetailModal: React.FC = () => {
   const {
     gigs,
     bids,
+    verifications,
     selectedGigId,
     setSelectedGigId,
     currentUser,
@@ -22,12 +24,20 @@ export const GigDetailModal: React.FC = () => {
     acceptBidAndCreateContract,
     setSelectedContractId,
     setActiveView,
+    getCollaborationBetween,
     addToast,
   } = useApp();
 
   const gig = gigs.find((g) => String(g.id).trim() === String(selectedGigId || '').trim());
 
   const isFreelancer = currentUser?.role === 'freelancer' || (!currentUser && gig?.status === 'open');
+  const myVerif = (verifications || []).find(
+    (v) =>
+      currentUser &&
+      (v.userId === currentUser.id ||
+        (v.userEmail && v.userEmail.toLowerCase() === currentUser.email?.toLowerCase()))
+  );
+  const isVerifiedFreelancer = currentUser?.isVerified === true || myVerif?.status === 'approved';
   const isClientOwner = currentUser?.role === 'client' && gig?.clientId === currentUser?.id;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'proposals' | 'apply'>(() => {
@@ -71,6 +81,10 @@ export const GigDetailModal: React.FC = () => {
 
   const handleApply = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isFreelancer && !isVerifiedFreelancer) {
+      addToast('warning', 'Verification Required', 'You must be approved by the Administrator before submitting proposals.');
+      return;
+    }
     if (!coverMessage.trim()) {
       addToast('warning', 'Missing Proposal', 'Please write a brief cover message.');
       return;
@@ -342,19 +356,43 @@ export const GigDetailModal: React.FC = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {gigBids.map((b) => (
-                  <div
-                    key={b.id}
-                    style={{
-                      padding: '18px',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <img src={b.freelancerAvatar} alt={b.freelancerName} className="client-avatar-sm" />
+                {gigBids.map((b) => {
+                  const repeatCollab = getCollaborationBetween(gig.clientId, b.freelancerId, gig.categoryName);
+                  return (
+                    <div
+                      key={b.id}
+                      style={{
+                        padding: '18px',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: repeatCollab ? '1px solid rgba(16, 185, 129, 0.45)' : '1px solid var(--border-subtle)',
+                        boxShadow: repeatCollab ? '0 0 20px rgba(16, 185, 129, 0.12)' : undefined,
+                      }}
+                    >
+                      {repeatCollab && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(99, 102, 241, 0.2))',
+                            border: '1px solid rgba(16, 185, 129, 0.4)',
+                            marginBottom: '10px',
+                            fontSize: '0.75rem',
+                            color: 'var(--accent-emerald)',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <Sparkles size={12} />
+                          <span>🌟 Repeat Partner • Completed {repeatCollab.completedContractsCount} previous contract(s) in {repeatCollab.domain}</span>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <img src={b.freelancerAvatar} alt={b.freelancerName} className="client-avatar-sm" />
                         <div>
                           <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {b.freelancerName}
@@ -424,14 +462,54 @@ export const GigDetailModal: React.FC = () => {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
+          )}
           </div>
         )}
 
         {/* Tab 3: Submit Proposal Studio (Freelancer Only) */}
-        {isFreelancer && activeTab === 'apply' && (
+        {isFreelancer && activeTab === 'apply' && !isVerifiedFreelancer && (
+          <div style={{ padding: '36px 20px', textAlign: 'center' }}>
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                background: 'rgba(245, 158, 11, 0.15)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px',
+                color: 'var(--accent-amber)',
+              }}
+            >
+              <Lock size={26} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '8px', color: 'var(--text-primary)' }}>
+              Administrator Verification Required
+            </h3>
+            <p style={{ maxWidth: '460px', margin: '0 auto 24px', fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              To safeguard client escrow funds and maintain premier quality, your freelancer profile must be reviewed and approved by the Platform Administrator before bidding on projects.
+            </p>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                setSelectedGigId(null);
+                setActiveView('verification');
+              }}
+              style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Sparkles size={16} /> Open Trust & Verification Center
+            </button>
+          </div>
+        )}
+
+        {/* Tab 3: Submit Proposal Studio (Verified Freelancers Only) */}
+        {isFreelancer && activeTab === 'apply' && isVerifiedFreelancer && (
           <form onSubmit={handleApply}>
             {/* AI Assistant Banner */}
             <div className="ai-assistant-card">

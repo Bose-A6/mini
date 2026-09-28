@@ -19,21 +19,38 @@ import {
   Cpu,
   RefreshCw,
   MessageSquare,
+  QrCode,
+  Camera,
+  LifeBuoy,
+  Clock,
 } from 'lucide-react';
 import { GigDetailModal } from '../Marketplace/GigDetailModal';
+import { VerificationWizard } from '../Verification/VerificationWizard';
+import type { Milestone } from '../../types';
+import {
+  FreelancerPaymentModal,
+  PaymentProofLightbox,
+} from '../Contracts/PaymentComponents';
 
 export const FreelancerDashboard: React.FC = () => {
   const {
     currentUser,
+    verifications,
     gigs,
     bids,
     contracts,
     categories,
     submitDeliverable,
+    updateFreelancerPaymentDetails,
+    confirmMilestonePayment,
     setActiveView,
     setSelectedGigId,
     selectedGigId,
     setSelectedContractId,
+    openSupportModal,
+    openInvoiceModal,
+    getRepeatClientsForFreelancer,
+    getCollaborationBetween,
     setIsAuthModalOpen,
     setAuthMode,
     isSyncingGigs,
@@ -41,7 +58,21 @@ export const FreelancerDashboard: React.FC = () => {
     addToast,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'available-gigs' | 'contracts' | 'proposals' | 'earnings'>('available-gigs');
+  const [paymentModalContractAndMilestone, setPaymentModalContractAndMilestone] = useState<{ contractId: string; milestone: Milestone } | null>(null);
+  const [proofLightboxMilestone, setProofLightboxMilestone] = useState<Milestone | null>(null);
+
+  const myVerif = useMemo(() => {
+    if (!currentUser) return null;
+    return (verifications || []).find(
+      (v) =>
+        v.userId === currentUser.id ||
+        (v.userEmail && v.userEmail.toLowerCase() === currentUser.email?.toLowerCase())
+    );
+  }, [verifications, currentUser]);
+
+  const isApproved = currentUser?.isVerified === true || myVerif?.status === 'approved';
+
+  const [activeTab, setActiveTab] = useState<'available-gigs' | 'contracts' | 'proposals' | 'repeat-clients' | 'earnings'>('available-gigs');
 
   // Search & Filter for Available Gigs tab
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,9 +88,42 @@ export const FreelancerDashboard: React.FC = () => {
   const [liveUrl, setLiveUrl] = useState<string>('');
   const [fileUrl, setFileUrl] = useState<string>('');
 
-  // Freelancer's items
-  const myBids = (bids || []).filter((b) => (currentUser && b.freelancerId === currentUser.id) || !currentUser);
-  const myContracts = (contracts || []).filter((c) => (currentUser && c.freelancerId === currentUser.id) || !currentUser);
+  // Freelancer's items - strictly belonging to this authenticated freelancer
+  const myBids = useMemo(() => {
+    if (!currentUser) return [];
+    return (bids || []).filter((b) => String(b.freelancerId).trim() === String(currentUser.id).trim());
+  }, [bids, currentUser]);
+
+  const myContracts = useMemo(() => {
+    if (!currentUser) return [];
+    return (contracts || []).filter((c) => String(c.freelancerId).trim() === String(currentUser.id).trim());
+  }, [contracts, currentUser]);
+
+  const myPendingOffers = useMemo(() => {
+    return myContracts.filter((c) => c.status === 'pending_acceptance');
+  }, [myContracts]);
+
+  const myActiveContracts = useMemo(() => {
+    return myContracts.filter((c) => c.status !== 'completed' && c.status !== 'pending_acceptance');
+  }, [myContracts]);
+
+  const myCompletedContracts = useMemo(() => {
+    return myContracts.filter((c) => c.status === 'completed');
+  }, [myContracts]);
+
+  const repeatClients = useMemo(() => {
+    if (!currentUser) return [];
+    return getRepeatClientsForFreelancer(currentUser.id);
+  }, [getRepeatClientsForFreelancer, currentUser]);
+
+  const [contractFilter, setContractFilter] = useState<'all' | 'in_progress' | 'pending_acceptance' | 'completed'>('all');
+
+  const filteredMyContracts = useMemo(() => {
+    if (contractFilter === 'all') return myContracts;
+    if (contractFilter === 'completed') return myCompletedContracts;
+    if (contractFilter === 'pending_acceptance') return myPendingOffers;
+    return myActiveContracts;
+  }, [myContracts, myCompletedContracts, myActiveContracts, myPendingOffers, contractFilter]);
 
   const openClientGigs = useMemo(() => {
     const targetCat = categories.find((c) => c.id === selectedCategory);
@@ -100,7 +164,7 @@ export const FreelancerDashboard: React.FC = () => {
   }, [gigs, selectedCategory, categories, searchQuery, maxBudgetFilter, sortBy]);
 
   const totalInEscrow = myContracts
-    .filter((c) => c.status === 'in_progress' || c.status === 'delivered')
+    .filter((c) => c.status === 'in_progress' || c.status === 'delivered' || c.status === 'revision_requested' || c.status === 'disputed')
     .reduce((sum, c) => sum + (c.amount || 0), 0);
 
   const totalEarned = currentUser?.totalEarned ?? 0;
@@ -152,6 +216,50 @@ export const FreelancerDashboard: React.FC = () => {
     }
   };
 
+  if (!isApproved) {
+    return (
+      <div>
+        <div
+          style={{
+            background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(99, 102, 241, 0.15))',
+            borderBottom: '1px solid rgba(245, 158, 11, 0.3)',
+            padding: '16px 24px',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '1000px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 700,
+                color: 'var(--accent-amber)',
+                fontSize: '0.9rem',
+              }}
+            >
+              <ShieldCheck size={18} /> FREELANCER PORTAL GATED:
+            </span>
+            <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+              Administrator verification & KYC approval required to unlock client project bidding, active escrows, and milestone payouts.
+            </span>
+          </div>
+        </div>
+        <VerificationWizard />
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       {/* Header Profile Bar */}
@@ -182,7 +290,7 @@ export const FreelancerDashboard: React.FC = () => {
             </div>
             <h2>{currentUser?.fullName || 'Freelancer Workspace'}</h2>
             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              {currentUser?.professionalTitle || 'Real-time Freelancer Hub'} • {currentUser?.rating ?? 5.0} ★ ({currentUser?.completedProjects ?? 0} projects completed)
+              {currentUser?.professionalTitle || 'Real-time Freelancer Hub'} • {currentUser?.rating ?? 5.0} ★ ({currentUser?.completedProjects !== undefined ? Math.max(currentUser.completedProjects, myCompletedContracts.length) : myCompletedContracts.length} projects completed)
             </p>
           </div>
         </div>
@@ -212,6 +320,21 @@ export const FreelancerDashboard: React.FC = () => {
             <ShieldCheck size={16} /> Trust & Verification Center
           </button>
           <button
+            className="btn-secondary"
+            onClick={() => openSupportModal()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: 'var(--accent-emerald)',
+            }}
+            title="Ask Admin Support & Clarify Doubts"
+          >
+            <LifeBuoy size={16} />
+            <span>Support & Doubts</span>
+          </button>
+          <button
             className="btn-primary"
             onClick={() => {
               setActiveTab('available-gigs');
@@ -224,6 +347,70 @@ export const FreelancerDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Pending Direct Contract Invitations Alert */}
+      {myPendingOffers.length > 0 && (
+        <div
+          style={{
+            padding: '16px 20px',
+            borderRadius: '14px',
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(99, 102, 241, 0.16))',
+            border: '1px solid rgba(245, 158, 11, 0.45)',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '14px',
+            boxShadow: '0 8px 25px rgba(245, 158, 11, 0.15)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                background: 'rgba(245, 158, 11, 0.25)',
+                display: 'grid',
+                placeItems: 'center',
+                color: 'var(--accent-amber)',
+              }}
+            >
+              <Clock size={22} />
+            </div>
+            <div>
+              <strong style={{ fontSize: '1rem', color: 'var(--accent-amber)', display: 'block' }}>
+                📬 Direct Contract Offer Awaiting Your Acceptance ({myPendingOffers.length})
+              </strong>
+              <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                Client <strong>{myPendingOffers[0].clientName}</strong> assigned you <strong>"{myPendingOffers[0].gigTitle}"</strong> with <strong>${myPendingOffers[0].amount.toLocaleString()} USD</strong> escrow vaulted. Mutual acceptance required before work starts.
+              </span>
+            </div>
+          </div>
+
+          <button
+            className="btn-primary"
+            style={{
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              color: 'black',
+              fontWeight: 700,
+              padding: '10px 18px',
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            onClick={() => {
+              setSelectedContractId(myPendingOffers[0].id);
+              setActiveView('contracts');
+            }}
+          >
+            <span>Review & Accept Contract Terms</span>
+            <ArrowRight size={15} />
+          </button>
+        </div>
+      )}
 
       {/* Role Guideline Banner */}
       <div
@@ -293,12 +480,15 @@ export const FreelancerDashboard: React.FC = () => {
 
         <div className="glass-panel" style={{ padding: '20px' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Active Contract Orders
+            Contract Orders
           </span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '6px' }}>
-            <strong style={{ fontSize: '1.8rem', color: 'var(--text-primary)' }}>{myContracts.length}</strong>
+            <strong style={{ fontSize: '1.8rem', color: 'var(--text-primary)' }}>{myActiveContracts.length}</strong>
             <span style={{ fontSize: '0.8rem', color: 'var(--accent-emerald)' }}>In Progress</span>
           </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', marginTop: '4px', display: 'block' }}>
+            {myCompletedContracts.length} Completed & Settled ✅
+          </span>
         </div>
 
         <div className="glass-panel" style={{ padding: '20px' }}>
@@ -310,6 +500,9 @@ export const FreelancerDashboard: React.FC = () => {
               ${totalInEscrow.toLocaleString()}
             </strong>
           </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', marginTop: '4px', display: 'block' }}>
+            ${myCompletedContracts.reduce((sum, c) => sum + (c.amount || 0), 0).toLocaleString()} Disbursed
+          </span>
         </div>
       </div>
 
@@ -375,6 +568,24 @@ export const FreelancerDashboard: React.FC = () => {
           }}
         >
           <FileCheck2 size={16} /> Active Contracts & Deliverables ({myContracts.length})
+        </button>
+
+        <button
+          className={`btn-ghost ${activeTab === 'repeat-clients' ? 'active' : ''}`}
+          onClick={() => setActiveTab('repeat-clients')}
+          style={{
+            borderBottom: activeTab === 'repeat-clients' ? '2px solid var(--accent-emerald)' : '2px solid transparent',
+            borderRadius: 0,
+            color: activeTab === 'repeat-clients' ? 'var(--accent-emerald)' : 'var(--text-muted)',
+            fontWeight: 600,
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Sparkles size={16} color="var(--accent-emerald)" /> Repeat Clients ({repeatClients.length})
         </button>
 
         <button
@@ -498,10 +709,32 @@ export const FreelancerDashboard: React.FC = () => {
               {openClientGigs.map((gig) => {
                 const hasApplied = myBids.some((b) => b.gigId === gig.id);
                 const isNew = new Date(gig.createdAt).getTime() > Date.now() - 2 * 86400000;
+                const repeatCollab = getCollaborationBetween(gig.clientId, currentUser?.id, gig.categoryName);
 
                 return (
-                  <div key={gig.id} className="glass-panel gig-card">
+                  <div key={gig.id} className="glass-panel gig-card" style={repeatCollab ? { border: '1px solid rgba(16, 185, 129, 0.45)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.12)' } : undefined}>
                     <div>
+                      {repeatCollab && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(99, 102, 241, 0.2))',
+                            border: '1px solid rgba(16, 185, 129, 0.4)',
+                            marginBottom: '10px',
+                            fontSize: '0.75rem',
+                            color: 'var(--accent-emerald)',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <Sparkles size={12} />
+                          <span>🌟 Repeat Client • You completed {repeatCollab.completedContractsCount} project(s) in {repeatCollab.domain}</span>
+                        </div>
+                      )}
+
                       <div className="gig-card-header">
                         <div className="gig-client-info">
                           <img src={gig.clientAvatar} alt={gig.clientName} className="client-avatar-sm" />
@@ -729,24 +962,98 @@ export const FreelancerDashboard: React.FC = () => {
       {/* TAB 3: Active Contracts & Deliverable Studio */}
       {activeTab === 'contracts' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {myContracts.length === 0 ? (
+          {/* Contracts Header & Filter Pills */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileCheck2 size={18} color="var(--accent-emerald)" />
+              My Contracts ({myContracts.length})
+              <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-muted)' }}>
+                ({myActiveContracts.length} In Progress, {myCompletedContracts.length} Completed)
+              </span>
+            </h3>
+
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {(['all', 'in_progress', 'completed'] as const).map((filterVal) => (
+                <button
+                  key={filterVal}
+                  onClick={() => setContractFilter(filterVal)}
+                  className={`btn-ghost ${contractFilter === filterVal ? 'active' : ''}`}
+                  style={{
+                    padding: '4px 12px',
+                    fontSize: '0.8rem',
+                    borderRadius: 'var(--radius-full)',
+                    background: contractFilter === filterVal ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.04)',
+                    color: contractFilter === filterVal ? 'white' : 'var(--text-muted)',
+                  }}
+                >
+                  {filterVal === 'all'
+                    ? `All (${myContracts.length})`
+                    : filterVal === 'in_progress'
+                    ? `In Progress (${myActiveContracts.length})`
+                    : `Completed (${myCompletedContracts.length})`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredMyContracts.length === 0 ? (
             <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center' }}>
               <FileCheck2 size={48} style={{ color: 'var(--text-muted)', marginBottom: '16px' }} />
-              <h3>No active contracts yet</h3>
+              <h3>No {contractFilter === 'completed' ? 'completed' : contractFilter === 'in_progress' ? 'in-progress' : ''} contracts</h3>
               <p style={{ maxWidth: '420px', margin: '8px auto 20px' }}>
-                Browse open client opportunities and submit proposals to win projects and begin escrow contracts.
+                {contractFilter === 'completed'
+                  ? 'Contracts will appear here once all milestone deliverables have been reviewed and approved by the client.'
+                  : 'Browse open client opportunities and submit proposals to win projects and begin escrow contracts.'}
               </p>
-              <button className="btn-primary" onClick={() => setActiveTab('available-gigs')}>
-                <Sparkles size={16} /> Browse Open Client Gigs
-              </button>
+              {contractFilter !== 'completed' && (
+                <button className="btn-primary" onClick={() => setActiveTab('available-gigs')}>
+                  <Sparkles size={16} /> Browse Open Client Gigs
+                </button>
+              )}
             </div>
           ) : (
-            myContracts.map((contract) => (
-              <div key={contract.id} className="glass-panel" style={{ padding: '28px' }}>
+            filteredMyContracts.map((contract) => (
+              <div key={contract.id} className="glass-panel" style={{ padding: '28px', border: contract.status === 'completed' ? '1px solid rgba(16, 185, 129, 0.35)' : undefined }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                       <span className="persona-badge badge-client">CLIENT: {contract.clientName}</span>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: 'var(--radius-full)',
+                          background:
+                            contract.status === 'completed'
+                              ? 'rgba(16, 185, 129, 0.2)'
+                              : contract.status === 'delivered'
+                              ? 'rgba(6, 182, 212, 0.2)'
+                              : contract.status === 'pending_acceptance'
+                              ? 'rgba(245, 158, 11, 0.2)'
+                              : 'rgba(99, 102, 241, 0.2)',
+                          color:
+                            contract.status === 'completed'
+                              ? 'var(--accent-emerald)'
+                              : contract.status === 'delivered'
+                              ? 'var(--accent-cyan)'
+                              : contract.status === 'pending_acceptance'
+                              ? 'var(--accent-amber)'
+                              : '#c7d2fe',
+                          border:
+                            contract.status === 'completed'
+                              ? '1px solid rgba(16, 185, 129, 0.4)'
+                              : contract.status === 'pending_acceptance'
+                              ? '1px solid rgba(245, 158, 11, 0.4)'
+                              : 'none',
+                        }}
+                      >
+                        {contract.status === 'completed'
+                          ? 'COMPLETED & SETTLED ✅'
+                          : contract.status === 'pending_acceptance'
+                          ? 'OFFER PENDING ACCEPTANCE ⏳'
+                          : contract.status.toUpperCase()}
+                      </span>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         Started {new Date(contract.createdAt).toLocaleDateString()}
                       </span>
@@ -755,12 +1062,21 @@ export const FreelancerDashboard: React.FC = () => {
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>TOTAL ESCROW FUNDED</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                      {contract.status === 'completed' ? 'TOTAL ESCROW EARNED' : 'TOTAL ESCROW FUNDED'}
+                    </span>
                     <strong style={{ fontSize: '1.4rem', color: 'var(--accent-emerald)' }}>
                       ${contract.amount.toLocaleString()}
                     </strong>
                   </div>
                 </div>
+
+                {contract.status === 'completed' && (
+                  <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', marginBottom: '20px', fontSize: '0.85rem', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={16} />
+                    <span><strong>Project Completed:</strong> All milestone deliverables accepted. 100% escrow ($${contract.amount.toLocaleString()}) credited to your earnings.</span>
+                  </div>
+                )}
 
                 {/* Milestones Stepper */}
                 <div style={{ marginBottom: '24px' }}>
@@ -810,22 +1126,79 @@ export const FreelancerDashboard: React.FC = () => {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                           <strong style={{ color: 'var(--accent-emerald)', fontSize: '1.1rem' }}>
                             ${m.amount.toLocaleString()}
                           </strong>
 
-                          {m.status === 'in_progress' && (
+                          {/* Payment details / QR indicator */}
+                          {contract.status !== 'completed' && (
                             <button
-                              className="btn-primary"
-                              style={{ padding: '8px 14px', fontSize: '0.85rem' }}
-                              onClick={() => openDeliverableModal(contract.id, m.id)}
+                              type="button"
+                              onClick={() => setPaymentModalContractAndMilestone({ contractId: contract.id, milestone: m })}
+                              style={{
+                                background: 'rgba(99, 102, 241, 0.12)',
+                                color: '#c7d2fe',
+                                border: '1px solid rgba(99, 102, 241, 0.3)',
+                                borderRadius: '6px',
+                                padding: '5px 9px',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
                             >
-                              <UploadCloud size={15} /> Submit Deliverable
+                              <QrCode size={12} /> {m.paymentDetails?.upiId || contract.upiId ? 'Edit UPI/QR' : 'Set UPI/QR'}
                             </button>
                           )}
 
-                          {m.status === 'submitted' && (
+                          {/* Payment Proof Badge if submitted */}
+                          {(m.paymentProof?.proofUrl || m.paymentStatus === 'proof_submitted') && (
+                            <button
+                              type="button"
+                              onClick={() => setProofLightboxMilestone(m)}
+                              style={{
+                                background: 'rgba(6, 182, 212, 0.15)',
+                                color: 'var(--accent-cyan)',
+                                border: '1px solid rgba(6, 182, 212, 0.35)',
+                                borderRadius: '6px',
+                                padding: '5px 9px',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <Camera size={12} /> View Proof
+                            </button>
+                          )}
+
+                          {/* Confirm Payment Received Button */}
+                          {m.paymentStatus === 'proof_submitted' && m.status !== 'approved' && contract.status !== 'completed' && (
+                            <button
+                              type="button"
+                              className="btn-success"
+                              style={{ padding: '5px 10px', fontSize: '0.75rem' }}
+                              onClick={() => confirmMilestonePayment(contract.id, m.id)}
+                            >
+                              <CheckCircle2 size={13} /> Confirm Receipt ✅
+                            </button>
+                          )}
+
+                          {m.status === 'in_progress' && contract.status !== 'completed' && (
+                            <button
+                              className="btn-primary"
+                              style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                              onClick={() => openDeliverableModal(contract.id, m.id)}
+                            >
+                              <UploadCloud size={14} /> Submit Deliverable
+                            </button>
+                          )}
+
+                          {m.status === 'submitted' && m.paymentStatus !== 'proof_submitted' && (
                             <span style={{ fontSize: '0.8rem', color: 'var(--accent-cyan)', fontWeight: 600 }}>
                               Under Client Review ⏳
                             </span>
@@ -833,7 +1206,13 @@ export const FreelancerDashboard: React.FC = () => {
 
                           {m.status === 'approved' && (
                             <span style={{ fontSize: '0.8rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>
-                              Payment Unlocked ✅
+                              Payment Settled ✅
+                            </span>
+                          )}
+
+                          {m.status === 'pending' && (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              🔒 Pending Prior Milestone
                             </span>
                           )}
                         </div>
@@ -843,7 +1222,17 @@ export const FreelancerDashboard: React.FC = () => {
                 </div>
 
                 {/* Footer Action */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+                  <button
+                    className="btn-secondary"
+                    style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', border: '1px solid rgba(99, 102, 241, 0.4)', color: '#c7d2fe' }}
+                    onClick={() => openInvoiceModal(contract.id)}
+                    title="View & Download Official Tax Invoice & Settlement Receipt"
+                  >
+                    <FileCheck2 size={15} color="var(--accent-cyan)" />
+                    <span>Tax Invoice & Receipt</span>
+                  </button>
+
                   <button
                     className="btn-primary"
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -853,12 +1242,164 @@ export const FreelancerDashboard: React.FC = () => {
                     }}
                   >
                     <MessageSquare size={16} />
-                    <span>Open Live Contract & Chat</span>
+                    <span>{contract.status === 'completed' ? 'View Completed Workspace & Review' : 'Open Live Contract & Chat'}</span>
                     <ArrowRight size={14} />
                   </button>
                 </div>
               </div>
             ))
+          )}
+        </div>
+      )}
+
+      {/* TAB: Repeat Clients & Domain Network */}
+      {activeTab === 'repeat-clients' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={20} color="var(--accent-emerald)" />
+                Repeat Clients Network ({repeatClients.length})
+              </h3>
+              <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Clients who have previously hired and approved milestones with you. Pitch direct extensions or follow-up milestone packages.
+              </p>
+            </div>
+          </div>
+
+          {repeatClients.length === 0 ? (
+            <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center' }}>
+              <Users size={48} style={{ color: 'var(--text-muted)', marginBottom: '16px' }} />
+              <h3>No repeat clients recorded yet</h3>
+              <p style={{ maxWidth: '440px', margin: '8px auto 20px', color: 'var(--text-secondary)' }}>
+                When clients approve your deliverables and complete contracts, they will be listed here with your shared domain history for fast direct collaboration.
+              </p>
+              <button className="btn-primary" onClick={() => setActiveTab('available-gigs')}>
+                <Sparkles size={16} /> Browse Live Client Projects
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+              {repeatClients.map((client) => (
+                <div
+                  key={client.partnerId}
+                  className="glass-panel"
+                  style={{
+                    padding: '24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    background: 'linear-gradient(145deg, rgba(13, 22, 38, 0.85), rgba(16, 185, 129, 0.05))',
+                    borderRadius: '16px',
+                  }}
+                >
+                  <div>
+                    {/* Client Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                      <img
+                        src={client.partnerAvatar}
+                        alt={client.partnerName}
+                        style={{
+                          width: '52px',
+                          height: '52px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '2px solid var(--accent-cyan)',
+                        }}
+                      />
+                      <div>
+                        <strong style={{ fontSize: '1.05rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {client.partnerName}
+                          <CheckCircle2 size={16} color="var(--accent-cyan)" />
+                        </strong>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
+                          Enterprise Client Partner
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            display: 'inline-block',
+                            padding: '1px 8px',
+                            borderRadius: '4px',
+                            background: 'rgba(6, 182, 212, 0.2)',
+                            color: 'var(--accent-cyan)',
+                            fontWeight: 700,
+                            marginTop: '4px',
+                          }}
+                        >
+                          {client.domain}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: '8px',
+                        padding: '10px',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>PROJECTS DELIVERED</span>
+                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{client.completedContractsCount}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>TOTAL TRANSACTED</span>
+                        <strong style={{ fontSize: '0.95rem', color: 'var(--accent-emerald)' }}>${client.totalAmount.toLocaleString()}</strong>
+                      </div>
+                    </div>
+
+                    {/* Past Contract Titles */}
+                    {client.contractTitles && client.contractTitles.length > 0 && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          DELIVERED PROJECTS:
+                        </span>
+                        <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                          {client.contractTitles.slice(0, 2).map((t, idx) => (
+                            <li key={idx} style={{ marginBottom: '2px' }}>{t}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                    <button
+                      className="btn-primary"
+                      style={{
+                        flex: 1,
+                        fontSize: '0.85rem',
+                        padding: '9px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                      onClick={() => {
+                        const matchingContract = myContracts.find((c) => String(c.clientId).trim() === String(client.partnerId).trim());
+                        if (matchingContract) {
+                          setSelectedContractId(matchingContract.id);
+                          setActiveView('contracts');
+                        } else {
+                          setActiveTab('available-gigs');
+                        }
+                      }}
+                    >
+                      <MessageSquare size={15} /> Open Collaboration Feed
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -969,6 +1510,40 @@ export const FreelancerDashboard: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Payment Modals */}
+      {paymentModalContractAndMilestone && (
+        <FreelancerPaymentModal
+          milestone={paymentModalContractAndMilestone.milestone}
+          contractId={paymentModalContractAndMilestone.contractId}
+          contractFreelancerName={currentUser?.fullName}
+          initialDetails={paymentModalContractAndMilestone.milestone.paymentDetails}
+          onSave={(details) => {
+            updateFreelancerPaymentDetails(
+              paymentModalContractAndMilestone.contractId,
+              paymentModalContractAndMilestone.milestone.id,
+              details
+            );
+          }}
+          onClose={() => setPaymentModalContractAndMilestone(null)}
+        />
+      )}
+
+      {proofLightboxMilestone && (
+        <PaymentProofLightbox
+          milestone={proofLightboxMilestone}
+          isFreelancer={true}
+          onConfirmReceipt={() => {
+            const parentContract = contracts.find((c) =>
+              (c.milestones || []).some((m) => m.id === proofLightboxMilestone.id)
+            );
+            if (parentContract) {
+              confirmMilestonePayment(parentContract.id, proofLightboxMilestone.id);
+            }
+          }}
+          onClose={() => setProofLightboxMilestone(null)}
+        />
       )}
 
       {/* Modal Detail View */}

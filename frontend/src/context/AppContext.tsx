@@ -11,6 +11,14 @@ import type {
   ToastMessage,
   AccountRole,
   Milestone,
+  MilestonePaymentDetails,
+  MilestonePaymentProof,
+  SupportTicket,
+  SupportTicketMessage,
+  TicketCategory,
+  TicketPriority,
+  TicketStatus,
+  CollaborationHistory,
 } from '../types';
 import { supabase } from '../lib/supabase';
 import { mockGigs, mockBids, mockCategories, mockVerifications } from '../data/mockData';
@@ -35,6 +43,12 @@ export interface AdminStats {
   pendingVerifications: number;
   verifiedPros: number;
   totalMessages: number;
+  totalTickets: number;
+  openTickets: number;
+  inProgressTickets: number;
+  resolvedTickets: number;
+  clientTickets: number;
+  freelancerTickets: number;
 }
 
 interface AppContextType {
@@ -46,6 +60,7 @@ interface AppContextType {
   contracts: OrderContract[];
   messages: ChatMessage[];
   verifications: VerificationSubmission[];
+  tickets: SupportTicket[];
   notifications: NotificationItem[];
   toasts: ToastMessage[];
   activeView: AppView;
@@ -74,7 +89,10 @@ interface AppContextType {
   acceptBidAndCreateContract: (bidId: string) => OrderContract | null;
   declineBid: (bidId: string) => void;
   submitDeliverable: (contractId: string, milestoneId: string, title: string, description: string, files: string[], liveUrl?: string) => void;
-  approveMilestoneAndReleaseEscrow: (contractId: string, milestoneId: string) => void;
+  approveMilestoneAndReleaseEscrow: (contractId: string, milestoneId: string, paymentProof?: MilestonePaymentProof) => void;
+  updateFreelancerPaymentDetails: (contractId: string, milestoneId: string | undefined, paymentDetails: MilestonePaymentDetails) => void;
+  submitMilestonePaymentProof: (contractId: string, milestoneId: string, proof: MilestonePaymentProof) => void;
+  confirmMilestonePayment: (contractId: string, milestoneId: string) => void;
   markWorkHandoverComplete: (contractId: string, handoverNotes: string) => void;
   completeContract: (contractId: string, rating?: number, reviewText?: string) => void;
   requestRevision: (contractId: string, milestoneId: string, reason: string) => void;
@@ -83,6 +101,61 @@ interface AppContextType {
   adminUpdateGig: (gigId: string, data: Partial<Gig> & { action?: string }) => Promise<void>;
   adminUpdateContract: (contractId: string, action: 'release_escrow' | 'refund_client' | 'mark_disputed', resolutionNotes?: string) => Promise<void>;
   sendMessage: (orderId: string, content: string, attachments?: string[]) => void;
+
+  // Support Desk Actions
+  isSupportModalOpen: boolean;
+  setIsSupportModalOpen: (open: boolean) => void;
+  activeSupportTicketId: string | null;
+  setActiveSupportTicketId: (id: string | null) => void;
+  openSupportModal: (ticketId?: string) => void;
+  createSupportTicket: (data: {
+    subject: string;
+    category: TicketCategory;
+    priority: TicketPriority;
+    description: string;
+    contractId?: string;
+    contractTitle?: string;
+    gigId?: string;
+    gigTitle?: string;
+    attachments?: string[];
+  }) => Promise<SupportTicket | null>;
+  sendTicketMessage: (ticketId: string, content: string, attachments?: string[]) => Promise<void>;
+  adminUpdateTicket: (ticketId: string, data: { status?: TicketStatus; priority?: TicketPriority; adminNotes?: string }) => Promise<void>;
+
+  // Collaboration & Domain Network Actions
+  getCollaborationBetween: (clientId?: string, freelancerId?: string, domain?: string) => CollaborationHistory | null;
+  getRepeatCollaboratorsForClient: (clientId?: string) => CollaborationHistory[];
+  getRepeatClientsForFreelancer: (freelancerId?: string) => CollaborationHistory[];
+  createDirectContract: (data: {
+    freelancerId: string;
+    freelancerName?: string;
+    freelancerAvatar?: string;
+    title: string;
+    categoryName: string;
+    amount: number;
+    deadline?: string;
+    milestones?: { title: string; amount: number }[];
+    note?: string;
+  }) => Promise<OrderContract | null>;
+  acceptContractOffer: (contractId: string) => Promise<void>;
+  declineContractOffer: (contractId: string, reason?: string) => Promise<void>;
+  cancelContractOffer: (contractId: string) => Promise<void>;
+
+  // Invoice & Receipt Actions
+  isInvoiceModalOpen: boolean;
+  setIsInvoiceModalOpen: (open: boolean) => void;
+  activeInvoiceContractId: string | null;
+  setActiveInvoiceContractId: (id: string | null) => void;
+  openInvoiceModal: (contractId?: string) => void;
+
+  // Direct Contract Modal Actions
+  isDirectContractModalOpen: boolean;
+  setIsDirectContractModalOpen: (open: boolean) => void;
+  directContractFreelancer: Persona | CollaborationHistory | null;
+  setDirectContractFreelancer: (partner: Persona | CollaborationHistory | null) => void;
+  openDirectContractModal: (partner: Persona | CollaborationHistory) => void;
+
+  // Notification & System Helpers
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   addToast: (type: ToastMessage['type'], title: string, message: string) => void;
@@ -100,6 +173,7 @@ const STORAGE_KEYS = {
   MESSAGES: 'fs_real_messages',
   VERIFICATIONS: 'fs_real_verifications',
   NOTIFICATIONS: 'fs_real_notifications',
+  TICKETS: 'fs_real_tickets',
 };
 
 const safeParse = <T,>(key: string, fallback: T): T => {
@@ -172,7 +246,40 @@ export const normalizeBid = (raw: any): Bid => {
 
 export const normalizeContract = (raw: any): OrderContract => {
   const isCompleted = raw.status === 'completed';
-  const rawMilestones = Array.isArray(raw.milestones) ? raw.milestones : [];
+  const rawAmt = Number(raw.amount || 1000);
+  const m1Amt = Math.round(rawAmt * 0.3);
+  const m2Amt = Math.round(rawAmt * 0.4);
+  const m3Amt = rawAmt - m1Amt - m2Amt;
+
+  const rawMilestones = Array.isArray(raw.milestones) && raw.milestones.length > 0
+    ? raw.milestones
+    : [
+        {
+          id: `m-${raw.id || Date.now()}-0`,
+          title: 'System Architecture & Schema Design',
+          amount: m1Amt,
+          status: isCompleted ? 'approved' : ((raw.deliverables && raw.deliverables.length > 0) || raw.status === 'delivered' ? 'submitted' : 'in_progress'),
+          deliverableNote: (raw.deliverables && raw.deliverables[0]?.description) || undefined,
+          deliverableFiles: (raw.deliverables && raw.deliverables[0]?.files) || [],
+          submittedAt: (raw.deliverables && raw.deliverables[0]?.submittedAt) || undefined,
+          deadline: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+        },
+        {
+          id: `m-${raw.id || Date.now()}-1`,
+          title: 'Core Functionality & API Integration',
+          amount: m2Amt,
+          status: isCompleted ? 'approved' : 'pending',
+          deadline: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+        },
+        {
+          id: `m-${raw.id || Date.now()}-2`,
+          title: 'Production Polish, Testing & Deployment',
+          amount: m3Amt,
+          status: isCompleted ? 'approved' : 'pending',
+          deadline: raw.deadline || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+        },
+      ];
+
   const normalizedMilestones: Milestone[] = rawMilestones.map((m: any, idx: number) => ({
     id: String(m.id || `m-${raw.id || Date.now()}-${idx}`),
     title: String(m.title || `Milestone ${idx + 1}`),
@@ -183,7 +290,20 @@ export const normalizeContract = (raw: any): OrderContract => {
     deliverableFiles: m.deliverableFiles || m.deliverable_files || [],
     submittedAt: m.submittedAt || m.submitted_at,
     approvedAt: m.approvedAt || m.approved_at || (isCompleted ? new Date().toISOString() : undefined),
+    paymentDetails: m.paymentDetails || m.payment_details || (raw.upiId ? { upiId: raw.upiId, phoneNumber: raw.phoneNumber, qrCodeUrl: raw.qrCodeUrl } : undefined),
+    paymentProof: m.paymentProof || m.payment_proof,
+    paymentStatus: m.paymentStatus || m.payment_status || (isCompleted ? 'settled' : (m.paymentProof || m.payment_proof) ? 'proof_submitted' : 'unpaid'),
   }));
+
+  const isPendingAcceptance = raw.status === 'pending_acceptance';
+  const allMilestonesApproved = normalizedMilestones.length > 0 && normalizedMilestones.every((m) => m.status === 'approved');
+  const contractStatus = isPendingAcceptance
+    ? 'pending_acceptance'
+    : (allMilestonesApproved || isCompleted)
+    ? 'completed'
+    : (raw.status === 'delivered' && !normalizedMilestones.every((m) => m.status === 'submitted' || m.status === 'approved'))
+    ? 'in_progress'
+    : (raw.status || 'in_progress');
 
   return {
     id: String(raw.id || `contract-${Date.now()}`),
@@ -195,8 +315,8 @@ export const normalizeContract = (raw: any): OrderContract => {
     freelancerId: String(raw.freelancerId || raw.freelancer_id || 'freelancer-unknown'),
     freelancerName: raw.freelancerName || raw.freelancer_name || 'Professional Freelancer',
     freelancerAvatar: raw.freelancerAvatar || raw.freelancer_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-    status: (raw.status || 'in_progress') as any,
-    amount: Number(raw.amount || 1000),
+    status: contractStatus as any,
+    amount: rawAmt,
     escrowFunded: Boolean(raw.escrowFunded ?? raw.escrow_funded ?? true),
     deadline: raw.deadline || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
     createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
@@ -208,6 +328,18 @@ export const normalizeContract = (raw: any): OrderContract => {
     deliverables: Array.isArray(raw.deliverables) ? raw.deliverables : [],
     clientRating: raw.clientRating !== undefined ? Number(raw.clientRating) : undefined,
     clientReview: raw.clientReview,
+    categoryId: raw.categoryId || raw.category_id,
+    categoryName: raw.categoryName || raw.category_name || (raw.gigTitle?.toLowerCase().includes('design') ? 'UI/UX Design Systems' : raw.gigTitle?.toLowerCase().includes('ai') ? 'AI & Machine Learning' : raw.gigTitle?.toLowerCase().includes('mobile') ? 'Mobile App Development' : 'Full-Stack Architecture'),
+    upiId: raw.upiId,
+    phoneNumber: raw.phoneNumber,
+    qrCodeUrl: raw.qrCodeUrl,
+    isDirectAssignment: Boolean(raw.isDirectAssignment ?? raw.is_direct_assignment ?? false),
+    invitationNote: raw.invitationNote || raw.invitation_note,
+    clientAccepted: Boolean(raw.clientAccepted ?? raw.client_accepted ?? true),
+    freelancerAccepted: Boolean(raw.freelancerAccepted ?? raw.freelancer_accepted ?? false),
+    acceptedAt: raw.acceptedAt || raw.accepted_at,
+    declinedAt: raw.declinedAt || raw.declined_at,
+    declineReason: raw.declineReason || raw.decline_reason,
   };
 };
 
@@ -249,6 +381,48 @@ export const normalizeVerification = (raw: any): VerificationSubmission => {
   };
 };
 
+export const normalizeTicketMessage = (raw: any): SupportTicketMessage => {
+  return {
+    id: String(raw.id || `msg-tck-${Date.now()}`),
+    ticketId: String(raw.ticketId || raw.ticket_id || ''),
+    senderId: String(raw.senderId || raw.sender_id || 'unknown'),
+    senderName: raw.senderName || raw.sender_name || 'User',
+    senderRole: (raw.senderRole || raw.sender_role || 'client') as any,
+    senderAvatar: raw.senderAvatar || raw.sender_avatar,
+    content: raw.content || '',
+    attachments: Array.isArray(raw.attachments) ? raw.attachments : typeof raw.attachments === 'string' && raw.attachments ? [raw.attachments] : [],
+    createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
+  };
+};
+
+export const normalizeTicket = (raw: any): SupportTicket => {
+  const messages = Array.isArray(raw.messages) ? raw.messages.map(normalizeTicketMessage) : [];
+  return {
+    id: String(raw.id || `ticket-${Date.now()}`),
+    ticketNumber: raw.ticketNumber || `#TCK-${Math.floor(1000 + Math.random() * 9000)}`,
+    userId: String(raw.userId || raw.user_id || 'user-unknown'),
+    userName: raw.userName || raw.user_name || 'User',
+    userEmail: raw.userEmail || raw.user_email || 'user@platform.dev',
+    userRole: (raw.userRole || raw.user_role || 'client') as any,
+    userAvatar: raw.userAvatar || raw.user_avatar,
+    subject: raw.subject || 'Support Inquiry',
+    category: (raw.category || 'general') as any,
+    priority: (raw.priority || 'medium') as any,
+    status: (raw.status || 'open') as any,
+    description: raw.description || '',
+    contractId: raw.contractId || raw.contract_id,
+    contractTitle: raw.contractTitle || raw.contract_title,
+    gigId: raw.gigId || raw.gig_id,
+    gigTitle: raw.gigTitle || raw.gig_title,
+    attachments: Array.isArray(raw.attachments) ? raw.attachments : typeof raw.attachments === 'string' && raw.attachments ? [raw.attachments] : [],
+    messages,
+    adminNotes: raw.adminNotes || raw.admin_notes || '',
+    createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
+    updatedAt: raw.updatedAt || raw.updated_at || raw.createdAt || new Date().toISOString(),
+    resolvedAt: raw.resolvedAt || raw.resolved_at,
+  };
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // 1. Current Authenticated User
   const [currentUser, setCurrentUser] = useState<Persona | null>(() => {
@@ -259,6 +433,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [isSyncingGigs, setIsSyncingGigs] = useState<boolean>(false);
+
+  // Support Desk modal state
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
+  const [activeSupportTicketId, setActiveSupportTicketId] = useState<string | null>(null);
+
+  // Invoice & Receipt modal state
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState<boolean>(false);
+  const [activeInvoiceContractId, setActiveInvoiceContractId] = useState<string | null>(null);
+
+  // Direct Contract Modal state
+  const [isDirectContractModalOpen, setIsDirectContractModalOpen] = useState<boolean>(false);
+  const [directContractFreelancer, setDirectContractFreelancer] = useState<Persona | CollaborationHistory | null>(null);
 
   // 2. Navigation State with Hash Support
   const getInitialView = (): AppView => {
@@ -297,12 +483,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedGigId, setSelectedGigId] = useState<string | null>(null);
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
 
-  // 3. Projects, Bids, Contracts, Verifications State
+  // 3. Projects, Bids, Contracts, Verifications, and Support Tickets State
   const [gigs, setGigs] = useState<Gig[]>(() => safeParse(STORAGE_KEYS.GIGS, mockGigs));
   const [bids, setBids] = useState<Bid[]>(() => safeParse(STORAGE_KEYS.BIDS, mockBids));
   const [contracts, setContracts] = useState<OrderContract[]>(() => safeParse(STORAGE_KEYS.CONTRACTS, []));
   const [messages, setMessages] = useState<ChatMessage[]>(() => safeParse(STORAGE_KEYS.MESSAGES, []));
   const [verifications, setVerifications] = useState<VerificationSubmission[]>(() => safeParse(STORAGE_KEYS.VERIFICATIONS, mockVerifications));
+  const [tickets, setTickets] = useState<SupportTicket[]>(() => safeParse(STORAGE_KEYS.TICKETS, []));
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => safeParse(STORAGE_KEYS.NOTIFICATIONS, []));
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -311,7 +498,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       
-      // 1. Fetch Gigs
+      // 1. Fetch Contracts
+      let fetchedBackendContracts: OrderContract[] = [];
+      try {
+        const contractsRes = await fetch(`${apiUrl}/api/marketplace/contracts`);
+        if (contractsRes.ok) {
+          const contractsData = await contractsRes.json();
+          if (contractsData && Array.isArray(contractsData.contracts)) {
+            fetchedBackendContracts = contractsData.contracts.map(normalizeContract);
+            setContracts((prev) => {
+              const contractMap = new Map<string, OrderContract>();
+              for (const c of prev || []) {
+                contractMap.set(String(c.id).trim(), c);
+              }
+              for (const bc of fetchedBackendContracts) {
+                contractMap.set(String(bc.id).trim(), bc);
+              }
+              const combined = Array.from(contractMap.values());
+              combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              try {
+                localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(combined));
+              } catch {}
+              return combined;
+            });
+          }
+        }
+      } catch {}
+
+      const completedContractGigIds = new Set(
+        fetchedBackendContracts
+          .filter((c) => c.status === 'completed' && c.gigId)
+          .map((c) => String(c.gigId).trim())
+      );
+
+      // 2. Fetch Gigs
       try {
         const gigsRes = await fetch(`${apiUrl}/api/marketplace/gigs`);
         if (gigsRes.ok) {
@@ -320,15 +540,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const backendGigs: Gig[] = data.gigs.map(normalizeGig);
             setGigs((prev) => {
               const gigMap = new Map<string, Gig>();
-              // Add prev first
               for (const g of prev || []) {
                 gigMap.set(String(g.id).trim(), g);
               }
-              // Overwrite with backend gigs
               for (const bg of backendGigs) {
-                gigMap.set(String(bg.id).trim(), bg);
+                const isGigCompleted = bg.status === 'completed' || completedContractGigIds.has(String(bg.id).trim());
+                gigMap.set(String(bg.id).trim(), isGigCompleted ? { ...bg, status: 'completed' } : bg);
               }
-              const combined = Array.from(gigMap.values());
+              const combined = Array.from(gigMap.values()).map((g) => {
+                if (completedContractGigIds.has(String(g.id).trim())) {
+                  return { ...g, status: 'completed' as const };
+                }
+                return g;
+              });
               combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
               try {
                 localStorage.setItem(STORAGE_KEYS.GIGS, JSON.stringify(combined));
@@ -339,7 +563,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } catch {}
 
-      // 2. Fetch Bids / Proposals
+      // 3. Fetch Bids / Proposals
       try {
         const bidsRes = await fetch(`${apiUrl}/api/marketplace/bids`);
         if (bidsRes.ok) {
@@ -358,32 +582,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
               try {
                 localStorage.setItem(STORAGE_KEYS.BIDS, JSON.stringify(combined));
-              } catch {}
-              return combined;
-            });
-          }
-        }
-      } catch {}
-
-      // 3. Fetch Contracts
-      try {
-        const contractsRes = await fetch(`${apiUrl}/api/marketplace/contracts`);
-        if (contractsRes.ok) {
-          const contractsData = await contractsRes.json();
-          if (contractsData && Array.isArray(contractsData.contracts)) {
-            const backendContracts: OrderContract[] = contractsData.contracts.map(normalizeContract);
-            setContracts((prev) => {
-              const contractMap = new Map<string, OrderContract>();
-              for (const c of prev || []) {
-                contractMap.set(String(c.id).trim(), c);
-              }
-              for (const bc of backendContracts) {
-                contractMap.set(String(bc.id).trim(), bc);
-              }
-              const combined = Array.from(contractMap.values());
-              combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-              try {
-                localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(combined));
               } catch {}
               return combined;
             });
@@ -436,6 +634,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               combined.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
               try {
                 localStorage.setItem(STORAGE_KEYS.VERIFICATIONS, JSON.stringify(combined));
+              } catch {}
+
+              // Sync logged-in freelancer verified status with their verification record
+              setCurrentUser((curr) => {
+                if (!curr || curr.role !== 'freelancer') return curr;
+                const myVerif = combined.find(
+                  (v) => v.userId === curr.id || (v.userEmail && v.userEmail.toLowerCase() === curr.email?.toLowerCase())
+                );
+                const isApproved = myVerif?.status === 'approved';
+                if (curr.isVerified !== isApproved) {
+                  return { ...curr, isVerified: isApproved };
+                }
+                return curr;
+              });
+
+              return combined;
+            });
+          }
+        }
+      } catch {}
+
+      // 6. Fetch Support Tickets
+      try {
+        const ticketsRes = await fetch(`${apiUrl}/api/marketplace/tickets`);
+        if (ticketsRes.ok) {
+          const ticketsData = await ticketsRes.json();
+          if (ticketsData && Array.isArray(ticketsData.tickets)) {
+            const backendTickets: SupportTicket[] = ticketsData.tickets.map(normalizeTicket);
+            setTickets((prev) => {
+              const ticketMap = new Map<string, SupportTicket>();
+              for (const t of prev || []) {
+                ticketMap.set(String(t.id).trim(), t);
+              }
+              for (const bt of backendTickets) {
+                ticketMap.set(String(bt.id).trim(), bt);
+              }
+              const combined = Array.from(ticketMap.values());
+              combined.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+              try {
+                localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(combined));
               } catch {}
               return combined;
             });
@@ -494,10 +732,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .reduce((acc, c) => acc + Number(c.amount || 0), 0);
     const platformFees = totalGMV * 0.05;
 
+    const completedGigIds = new Set(
+      contracts
+        .filter((c) => c.status === 'completed' && c.gigId)
+        .map((c) => String(c.gigId).trim())
+    );
     const totalGigs = gigs.length;
-    const openGigs = gigs.filter((g) => (g.status || 'open') === 'open').length;
-    const awardedGigs = gigs.filter((g) => g.status === 'awarded' || g.status === 'in_progress').length;
-    const completedGigs = gigs.filter((g) => g.status === 'completed').length;
+    const completedGigs = gigs.filter((g) => g.status === 'completed' || completedGigIds.has(String(g.id).trim())).length;
+    const openGigs = gigs.filter((g) => (g.status || 'open') === 'open' && !completedGigIds.has(String(g.id).trim())).length;
+    const awardedGigs = gigs.filter((g) => (g.status === 'awarded' || (g.status as any) === 'in_progress') && !completedGigIds.has(String(g.id).trim())).length;
 
     const totalBids = bids.length;
     const pendingBids = bids.filter((b) => (b.status || 'pending') === 'pending').length;
@@ -505,6 +748,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const pendingVerifs = verifications.filter((v) => v.status === 'pending' || v.status === 'under_review').length;
     const approvedVerifs = verifications.filter((v) => v.status === 'approved').length;
+
+    const totalTickets = tickets.length;
+    const openTickets = tickets.filter((t) => t.status === 'open').length;
+    const inProgressTickets = tickets.filter((t) => t.status === 'in_progress').length;
+    const resolvedTickets = tickets.filter((t) => t.status === 'resolved' || t.status === 'closed').length;
+    const clientTickets = tickets.filter((t) => t.userRole === 'client').length;
+    const freelancerTickets = tickets.filter((t) => t.userRole === 'freelancer').length;
 
     return {
       totalGMV,
@@ -522,8 +772,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       pendingVerifications: pendingVerifs,
       verifiedPros: approvedVerifs,
       totalMessages: messages.length,
+      totalTickets,
+      openTickets,
+      inProgressTickets,
+      resolvedTickets,
+      clientTickets,
+      freelancerTickets,
     };
-  }, [contracts, gigs, bids, verifications, messages]);
+  }, [contracts, gigs, bids, verifications, messages, tickets]);
 
   // Sync state to local storage
   useEffect(() => {
@@ -661,6 +917,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } catch {}
 
           const role = (payload.user.role as AccountRole) || 'client';
+          let isVerified = role === 'admin';
+          if (role === 'freelancer') {
+            const allVerifs: VerificationSubmission[] = verifications.length > 0 ? verifications : safeParse(STORAGE_KEYS.VERIFICATIONS, mockVerifications);
+            const found = allVerifs.find(
+              (v) => v.userId === payload.user.id || (v.userEmail && v.userEmail.toLowerCase() === cleanEmail)
+            );
+            isVerified = found?.status === 'approved';
+          }
+
           const user: Persona = {
             id: payload.user.id,
             email: payload.user.email || cleanEmail,
@@ -674,7 +939,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             completedProjects: 0,
             totalEarned: 0,
             totalSpent: 0,
-            isVerified: role === 'admin',
+            isVerified,
             bio: '',
             skills: [],
           };
@@ -704,6 +969,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const role = (data.user.user_metadata?.role as AccountRole) || 'client';
       const fullName = data.user.user_metadata?.full_name || cleanEmail.split('@')[0];
+      let isVerified = role === 'admin';
+      if (role === 'freelancer') {
+        const allVerifs: VerificationSubmission[] = verifications.length > 0 ? verifications : safeParse(STORAGE_KEYS.VERIFICATIONS, mockVerifications);
+        const found = allVerifs.find(
+          (v) => v.userId === data.user.id || (v.userEmail && v.userEmail.toLowerCase() === cleanEmail)
+        );
+        isVerified = found?.status === 'approved';
+      }
+
       const user: Persona = {
         id: data.user.id,
         email: data.user.email || cleanEmail,
@@ -717,7 +991,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         completedProjects: 0,
         totalEarned: 0,
         totalSpent: 0,
-        isVerified: role === 'admin',
+        isVerified,
         bio: '',
         skills: [],
       };
@@ -1190,16 +1464,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ? bid.milestones.map((m, idx) => ({
             id: `m-${Date.now()}-${idx}`,
             title: m.title,
-            amount: m.amount,
+            amount: Number(m.amount || 0),
             status: idx === 0 ? 'in_progress' : 'pending',
             deadline: new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
           }))
         : [
             {
               id: `m-${Date.now()}-0`,
-              title: 'Complete Project Deliverables & Handover',
-              amount: bid.proposedPrice,
+              title: 'System Architecture & Schema Design',
+              amount: Math.round(bid.proposedPrice * 0.3),
               status: 'in_progress',
+              deadline: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+            },
+            {
+              id: `m-${Date.now()}-1`,
+              title: 'Core Functionality & API Integration',
+              amount: Math.round(bid.proposedPrice * 0.4),
+              status: 'pending',
+              deadline: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+            },
+            {
+              id: `m-${Date.now()}-2`,
+              title: 'Production Polish, Testing & Deployment',
+              amount: bid.proposedPrice - Math.round(bid.proposedPrice * 0.3) - Math.round(bid.proposedPrice * 0.4),
+              status: 'pending',
               deadline: new Date(Date.now() + (bid.deliveryDays || 14) * 86400000).toISOString().split('T')[0],
             },
           ];
@@ -1295,6 +1583,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     files: string[],
     liveUrl?: string
   ) => {
+    const contract = contracts.find((c) => c.id === contractId);
+    if (!contract) return;
+
     const newDeliverable = {
       id: `del-${Date.now()}`,
       milestoneId,
@@ -1305,264 +1596,650 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       submittedAt: new Date().toISOString(),
     };
 
-    let updatedMilestones: Milestone[] = [];
-    let updatedDeliverables: any[] = [];
+    const currentMilestones = contract.milestones && contract.milestones.length > 0 ? contract.milestones : [];
+    
+    let matched = false;
+    const updatedMilestones = currentMilestones.map((m) => {
+      if (m.id === milestoneId) {
+        matched = true;
+        return {
+          ...m,
+          status: 'submitted' as const,
+          deliverableNote: description,
+          deliverableFiles: files,
+          submittedAt: new Date().toISOString(),
+        };
+      }
+      return m;
+    });
+
+    if (!matched && updatedMilestones.length > 0) {
+      const inProgIdx = updatedMilestones.findIndex((m) => m.status === 'in_progress');
+      const targetIdx = inProgIdx >= 0 ? inProgIdx : 0;
+      updatedMilestones[targetIdx] = {
+        ...updatedMilestones[targetIdx],
+        status: 'submitted' as const,
+        deliverableNote: description,
+        deliverableFiles: files,
+        submittedAt: new Date().toISOString(),
+      };
+    }
+
+    const updatedDeliverables = [newDeliverable, ...(contract.deliverables || [])];
+    const allDoneOrSubmitted = updatedMilestones.length > 0 && updatedMilestones.every(
+      (m) => m.status === 'submitted' || m.status === 'approved'
+    );
+    const nextContractStatus: 'in_progress' | 'delivered' = allDoneOrSubmitted ? 'delivered' : 'in_progress';
 
     setContracts((prev) =>
-      prev.map((c) => {
-        if (c.id !== contractId) return c;
-        updatedMilestones = (c.milestones || []).map((m) =>
-          m.id === milestoneId
-            ? {
-                ...m,
-                status: 'submitted' as const,
-                deliverableNote: description,
-                deliverableFiles: files,
-                submittedAt: new Date().toISOString(),
-              }
-            : m
-        );
-        updatedDeliverables = [newDeliverable, ...(c.deliverables || [])];
-        return {
-          ...c,
-          status: 'delivered',
-          milestones: updatedMilestones,
-          deliverables: updatedDeliverables,
-        };
-      })
+      prev.map((c) =>
+        c.id === contractId
+          ? {
+              ...c,
+              status: nextContractStatus,
+              milestones: updatedMilestones,
+              deliverables: updatedDeliverables,
+            }
+          : c
+      )
     );
 
-    const contract = contracts.find((c) => c.id === contractId);
-    if (contract) {
-      const senderName = currentUser?.fullName || contract.freelancerName;
-      const senderId = currentUser?.id || contract.freelancerId;
-      const msg: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        orderId: contractId,
-        senderId,
-        senderName,
-        senderAvatar: currentUser?.avatarUrl || contract.freelancerAvatar,
-        senderRole: 'freelancer',
-        content: `📦 **Deliverable Submitted**: "${title}"\n${description}${liveUrl ? `\n🔗 Staging / Preview: ${liveUrl}` : ''}`,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-      };
-      setMessages((prev) => [...prev, msg]);
+    const senderName = currentUser?.fullName || contract.freelancerName;
+    const senderId = currentUser?.id || contract.freelancerId;
+    const msg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      orderId: contractId,
+      senderId,
+      senderName,
+      senderAvatar: currentUser?.avatarUrl || contract.freelancerAvatar,
+      senderRole: 'freelancer',
+      content: `📦 **Deliverable Submitted**: "${title}"\n${description}${liveUrl ? `\n🔗 Staging / Preview: ${liveUrl}` : ''}`,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setMessages((prev) => [...prev, msg]);
 
-      // Sync message & contract status to backend
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-        fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msg),
-        }).catch(() => {});
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      }).catch(() => {});
 
-        fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'delivered',
-            milestones: updatedMilestones,
-            deliverables: updatedDeliverables,
-          }),
-        }).catch(() => {});
-      } catch {}
+      fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: nextContractStatus,
+          milestones: updatedMilestones,
+          deliverables: updatedDeliverables,
+        }),
+      }).catch(() => {});
+    } catch {}
 
-      const notif: NotificationItem = {
-        id: `notif-${Date.now()}`,
-        userId: contract.clientId,
-        type: 'milestone',
-        title: 'Milestone Deliverable Submitted',
-        body: `${senderName} submitted work for "${title}".`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        targetView: 'contracts',
-      };
-      setNotifications((prev) => [notif, ...prev]);
-    }
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: contract.clientId,
+      type: 'milestone',
+      title: 'Milestone Deliverable Submitted',
+      body: `${senderName} submitted work for "${title}".`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      targetView: 'contracts',
+    };
+    setNotifications((prev) => [notif, ...prev]);
 
     addToast('success', 'Deliverable Submitted!', 'Client notified to review your submission.');
     triggerCelebration();
   }, [contracts, currentUser, addToast, triggerCelebration]);
 
-  // Action: Approve Milestone & Release Escrow
-  const approveMilestoneAndReleaseEscrow = useCallback((contractId: string, milestoneId: string) => {
-    let approvedAmount = 0;
-    let finalMilestones: Milestone[] = [];
-    let nextContractStatus: 'in_progress' | 'completed' = 'in_progress';
-    let completedAt: string | undefined = undefined;
+  // Action: Update Freelancer Payment Details (UPI, Phone, QR)
+  const updateFreelancerPaymentDetails = useCallback((
+    contractId: string,
+    milestoneId: string | undefined,
+    paymentDetails: MilestonePaymentDetails
+  ) => {
+    const contract = contracts.find((c) => c.id === contractId);
+    if (!contract) return;
+
+    const currentMilestones = contract.milestones || [];
+    const updatedMilestones = currentMilestones.map((m) => {
+      if (!milestoneId || m.id === milestoneId) {
+        return {
+          ...m,
+          paymentDetails: {
+            ...paymentDetails,
+            updatedAt: new Date().toISOString(),
+          },
+        };
+      }
+      return m;
+    });
 
     setContracts((prev) =>
-      prev.map((c) => {
-        if (c.id !== contractId) return c;
-
-        const updatedMilestones = (c.milestones || []).map((m) => {
-          if (m.id === milestoneId) {
-            approvedAmount = m.amount;
-            return {
-              ...m,
-              status: 'approved' as const,
-              approvedAt: new Date().toISOString(),
-            };
-          }
-          return m;
-        });
-
-        const remainingPending = updatedMilestones.filter((m) => m.status === 'pending');
-        if (remainingPending.length > 0) {
-          const firstPending = remainingPending[0];
-          finalMilestones = updatedMilestones.map((m) =>
-            m.id === firstPending.id ? { ...m, status: 'in_progress' as const } : m
-          );
-          nextContractStatus = 'in_progress';
-          return {
-            ...c,
-            status: 'in_progress' as const,
-            milestones: finalMilestones,
-          };
-        } else {
-          const isAllDone = updatedMilestones.every((m) => m.status === 'approved');
-          finalMilestones = updatedMilestones;
-          nextContractStatus = isAllDone ? ('completed' as const) : ('in_progress' as const);
-          completedAt = isAllDone ? new Date().toISOString() : undefined;
-          return {
-            ...c,
-            status: nextContractStatus,
-            milestones: finalMilestones,
-            completedAt,
-          };
-        }
-      })
+      prev.map((c) =>
+        c.id === contractId
+          ? {
+              ...c,
+              milestones: updatedMilestones,
+              upiId: paymentDetails.upiId || c.upiId,
+              phoneNumber: paymentDetails.phoneNumber || c.phoneNumber,
+              qrCodeUrl: paymentDetails.qrCodeUrl || c.qrCodeUrl,
+            }
+          : c
+      )
     );
 
+    const senderName = currentUser?.fullName || contract.freelancerName;
+    const senderId = currentUser?.id || contract.freelancerId;
+    const msg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      orderId: contractId,
+      senderId,
+      senderName,
+      senderAvatar: currentUser?.avatarUrl || contract.freelancerAvatar,
+      senderRole: 'freelancer',
+      content: `💳 **Freelancer Payment Coordinates Shared**\n` +
+        `• UPI ID: \`${paymentDetails.upiId || 'Not provided'}\`\n` +
+        `• Phone: \`${paymentDetails.phoneNumber || 'Not provided'}\`\n` +
+        `• Payee Name: \`${paymentDetails.accountName || senderName}\`\n` +
+        `${paymentDetails.paymentNote ? `• Instructions: ${paymentDetails.paymentNote}\n` : ''}` +
+        `You can scan the QR code or use the UPI ID in the Milestone Settlement panel to send payments.`,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setMessages((prev) => [...prev, msg]);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      }).catch(() => {});
+
+      fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          milestones: updatedMilestones,
+          upiId: paymentDetails.upiId,
+          phoneNumber: paymentDetails.phoneNumber,
+          qrCodeUrl: paymentDetails.qrCodeUrl,
+        }),
+      }).catch(() => {});
+    } catch {}
+
+    addToast('success', 'Payment Coordinates Updated', 'Client can now transfer funds directly via UPI/Phone/QR.');
+  }, [contracts, currentUser, addToast]);
+
+  // Action: Submit Milestone Payment Proof (Client)
+  const submitMilestonePaymentProof = useCallback((
+    contractId: string,
+    milestoneId: string,
+    proof: MilestonePaymentProof
+  ) => {
     const contract = contracts.find((c) => c.id === contractId);
-    if (contract) {
-      // Update freelancer earnings & client spending in user state
-      setCurrentUser((prev) => {
-        if (!prev) return prev;
-        if (prev.id === contract.freelancerId) {
-          return {
-            ...prev,
-            totalEarned: (prev.totalEarned || 0) + approvedAmount,
-          };
-        }
-        if (prev.id === contract.clientId) {
-          return {
-            ...prev,
-            totalSpent: (prev.totalSpent || 0) + approvedAmount,
-          };
-        }
-        return prev;
-      });
+    if (!contract) return;
 
-      const senderName = currentUser?.fullName || contract.clientName;
-      const senderId = currentUser?.id || contract.clientId;
-      const msg: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        orderId: contractId,
-        senderId,
-        senderName,
-        senderAvatar: currentUser?.avatarUrl || contract.clientAvatar,
-        senderRole: 'client',
-        content: `🎉 **Milestone Approved!** Escrow of $${approvedAmount.toLocaleString()} has been unlocked and released to the freelancer.`,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-      };
-      setMessages((prev) => [...prev, msg]);
+    const currentMilestones = contract.milestones || [];
+    let milestoneTitle = 'Milestone';
+    const updatedMilestones = currentMilestones.map((m) => {
+      if (m.id === milestoneId) {
+        milestoneTitle = m.title;
+        return {
+          ...m,
+          paymentProof: {
+            ...proof,
+            submittedAt: proof.submittedAt || new Date().toISOString(),
+            status: 'submitted' as const,
+          },
+          paymentStatus: 'proof_submitted' as const,
+        };
+      }
+      return m;
+    });
 
-      // Sync message & contract to backend
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-        fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msg),
-        }).catch(() => {});
+    setContracts((prev) =>
+      prev.map((c) =>
+        c.id === contractId
+          ? {
+              ...c,
+              milestones: updatedMilestones,
+            }
+          : c
+      )
+    );
 
-        fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: nextContractStatus,
-            milestones: finalMilestones,
-            completedAt,
-          }),
-        }).catch(() => {});
-      } catch {}
+    const senderName = currentUser?.fullName || contract.clientName;
+    const senderId = currentUser?.id || contract.clientId;
+    const msg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      orderId: contractId,
+      senderId,
+      senderName,
+      senderAvatar: currentUser?.avatarUrl || contract.clientAvatar,
+      senderRole: 'client',
+      content: `📸 **Payment Proof Submitted for Milestone**: "${milestoneTitle}"\n` +
+        `• Amount Paid: **$${proof.amountPaid.toLocaleString()}**\n` +
+        `• Payment Mode: **${(proof.paymentMode || 'UPI').toUpperCase()}**\n` +
+        `• Transaction / UTR Ref: \`${proof.transactionId || 'N/A'}\`\n` +
+        `${proof.note ? `• Client Note: ${proof.note}\n` : ''}` +
+        `\nScreenshot attached for freelancer confirmation.`,
+      attachments: proof.proofUrl ? [proof.proofUrl] : [],
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setMessages((prev) => [...prev, msg]);
 
-      const notif: NotificationItem = {
-        id: `notif-${Date.now()}`,
-        userId: contract.freelancerId,
-        type: 'milestone',
-        title: 'Escrow Payment Released! 💰',
-        body: `${senderName} approved your milestone. $${approvedAmount.toLocaleString()} has been credited.`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        targetView: 'contracts',
-      };
-      setNotifications((prev) => [notif, ...prev]);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      }).catch(() => {});
+
+      fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          milestones: updatedMilestones,
+        }),
+      }).catch(() => {});
+    } catch {}
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: contract.freelancerId,
+      type: 'milestone',
+      title: 'Payment Proof Received! 📸',
+      body: `${senderName} submitted payment proof ($${proof.amountPaid.toLocaleString()}) for "${milestoneTitle}".`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      targetView: 'contracts',
+    };
+    setNotifications((prev) => [notif, ...prev]);
+
+    addToast('success', 'Payment Proof Submitted!', 'Screenshot and transaction reference shared with freelancer.');
+    triggerCelebration();
+  }, [contracts, currentUser, addToast, triggerCelebration]);
+
+  // Action: Confirm Milestone Payment (Freelancer Verification)
+  const confirmMilestonePayment = useCallback((
+    contractId: string,
+    milestoneId: string
+  ) => {
+    const contract = contracts.find((c) => c.id === contractId);
+    if (!contract) return;
+
+    const currentMilestones = contract.milestones || [];
+    let approvedAmount = 0;
+    let milestoneTitle = 'Milestone';
+
+    const updatedMilestones = currentMilestones.map((m) => {
+      if (m.id === milestoneId) {
+        milestoneTitle = m.title;
+        approvedAmount = Number(m.amount || 0);
+        return {
+          ...m,
+          status: 'approved' as const,
+          approvedAt: m.approvedAt || new Date().toISOString(),
+          paymentStatus: 'settled' as const,
+          paymentProof: m.paymentProof
+            ? { ...m.paymentProof, status: 'confirmed' as const, confirmedAt: new Date().toISOString() }
+            : { amountPaid: approvedAmount, submittedAt: new Date().toISOString(), status: 'confirmed' as const, confirmedAt: new Date().toISOString() },
+        };
+      }
+      return m;
+    });
+
+    let hasActivatedNext = false;
+    const finalMilestones = updatedMilestones.map((m) => {
+      if (!hasActivatedNext && m.status === 'pending') {
+        hasActivatedNext = true;
+        return { ...m, status: 'in_progress' as const };
+      }
+      return m;
+    });
+
+    const isAllDone = finalMilestones.length > 0 && finalMilestones.every((m) => m.status === 'approved');
+    const nextContractStatus: 'in_progress' | 'completed' = isAllDone ? 'completed' : 'in_progress';
+    const completedAt = isAllDone ? new Date().toISOString() : undefined;
+
+    setContracts((prev) =>
+      prev.map((c) =>
+        c.id === contractId
+          ? {
+              ...c,
+              status: nextContractStatus,
+              milestones: finalMilestones,
+              completedAt,
+            }
+          : c
+      )
+    );
+
+    if (isAllDone && contract.gigId) {
+      setGigs((prev) =>
+        prev.map((g) => (String(g.id).trim() === String(contract.gigId).trim() ? { ...g, status: 'completed' as const } : g))
+      );
     }
 
-    addToast('success', 'Escrow Released!', `$${approvedAmount.toLocaleString()} successfully paid to freelancer.`);
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      if (prev.id === contract.freelancerId) {
+        return {
+          ...prev,
+          totalEarned: (prev.totalEarned || 0) + approvedAmount,
+          completedProjects: isAllDone ? (prev.completedProjects || 0) + 1 : prev.completedProjects,
+        };
+      }
+      if (prev.id === contract.clientId) {
+        return {
+          ...prev,
+          totalSpent: (prev.totalSpent || 0) + approvedAmount,
+          completedProjects: isAllDone ? (prev.completedProjects || 0) + 1 : prev.completedProjects,
+        };
+      }
+      return prev;
+    });
+
+    const senderName = currentUser?.fullName || contract.freelancerName;
+    const senderId = currentUser?.id || contract.freelancerId;
+    const msg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      orderId: contractId,
+      senderId,
+      senderName,
+      senderAvatar: currentUser?.avatarUrl || contract.freelancerAvatar,
+      senderRole: 'freelancer',
+      content: isAllDone
+        ? `✅ **Payment Received & All Milestones Settled!**\nFreelancer verified receipt of all milestone payments. Total contract of $${contract.amount.toLocaleString()} is completed!`
+        : `✅ **Payment Received & Verified!**\nFreelancer confirmed receipt of $${approvedAmount.toLocaleString()} for "${milestoneTitle}". Milestone marked as settled.`,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setMessages((prev) => [...prev, msg]);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      }).catch(() => {});
+
+      fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: nextContractStatus,
+          milestones: finalMilestones,
+          completedAt,
+        }),
+      }).catch(() => {});
+
+      if (isAllDone && contract.gigId) {
+        fetch(`${apiUrl}/api/marketplace/gigs/${contract.gigId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'completed' }),
+        }).catch(() => {});
+      }
+    } catch {}
+
+    addToast('success', 'Payment Confirmed & Verified ✅', `Milestone escrow of $${approvedAmount.toLocaleString()} settled.`);
+    triggerCelebration();
+  }, [contracts, currentUser, addToast, triggerCelebration]);
+
+  // Action: Approve Milestone & Release Escrow
+  const approveMilestoneAndReleaseEscrow = useCallback((
+    contractId: string,
+    milestoneId: string,
+    paymentProof?: MilestonePaymentProof
+  ) => {
+    const contract = contracts.find((c) => c.id === contractId);
+    if (!contract) return;
+
+    const currentMilestones = contract.milestones && contract.milestones.length > 0 ? contract.milestones : [];
+    
+    // Security check: Milestone must be submitted before escrow release
+    const targetMilestone = currentMilestones.find((m) => m.id === milestoneId) || currentMilestones.find((m) => m.status === 'submitted');
+    if (targetMilestone && targetMilestone.status !== 'submitted' && targetMilestone.status !== 'approved') {
+      addToast('warning', 'Deliverable Required', `The freelancer must first submit deliverables for "${targetMilestone.title}" before escrow can be released.`);
+      return;
+    }
+
+    let approvedAmount = 0;
+    let milestoneTitle = 'Milestone';
+    
+    let matched = false;
+    const updatedMilestones = currentMilestones.map((m) => {
+      if (m.id === milestoneId) {
+        matched = true;
+        milestoneTitle = m.title;
+        approvedAmount = Number(m.amount || 0);
+        return {
+          ...m,
+          status: 'approved' as const,
+          approvedAt: new Date().toISOString(),
+          paymentStatus: 'settled' as const,
+          paymentProof: paymentProof || m.paymentProof || { amountPaid: approvedAmount, submittedAt: new Date().toISOString(), status: 'confirmed' as const },
+        };
+      }
+      return m;
+    });
+
+    if (!matched && updatedMilestones.length > 0) {
+      const submittedIdx = updatedMilestones.findIndex((m) => m.status === 'submitted');
+      if (submittedIdx >= 0) {
+        milestoneTitle = updatedMilestones[submittedIdx].title;
+        approvedAmount = Number(updatedMilestones[submittedIdx].amount || 0);
+        updatedMilestones[submittedIdx] = {
+          ...updatedMilestones[submittedIdx],
+          status: 'approved' as const,
+          approvedAt: new Date().toISOString(),
+          paymentStatus: 'settled' as const,
+          paymentProof: paymentProof || updatedMilestones[submittedIdx].paymentProof || { amountPaid: approvedAmount, submittedAt: new Date().toISOString(), status: 'confirmed' as const },
+        };
+      }
+    }
+
+    if (approvedAmount <= 0) {
+      approvedAmount = Math.round(Number(contract.amount || 1000) * 0.3);
+    }
+
+    let hasActivatedNext = false;
+    const finalMilestones = updatedMilestones.map((m) => {
+      if (!hasActivatedNext && m.status === 'pending') {
+        hasActivatedNext = true;
+        return { ...m, status: 'in_progress' as const };
+      }
+      return m;
+    });
+
+    const isAllDone = finalMilestones.length > 0 && finalMilestones.every((m) => m.status === 'approved');
+    const nextContractStatus: 'in_progress' | 'completed' = isAllDone ? 'completed' : 'in_progress';
+    const completedAt = isAllDone ? new Date().toISOString() : undefined;
+
+    setContracts((prev) =>
+      prev.map((c) =>
+        c.id === contractId
+          ? {
+              ...c,
+              status: nextContractStatus,
+              milestones: finalMilestones,
+              completedAt,
+            }
+          : c
+      )
+    );
+
+    if (isAllDone && contract.gigId) {
+      setGigs((prev) =>
+        prev.map((g) => (String(g.id).trim() === String(contract.gigId).trim() ? { ...g, status: 'completed' as const } : g))
+      );
+    }
+
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      if (prev.id === contract.freelancerId) {
+        return {
+          ...prev,
+          totalEarned: (prev.totalEarned || 0) + approvedAmount,
+          completedProjects: isAllDone ? (prev.completedProjects || 0) + 1 : prev.completedProjects,
+        };
+      }
+      if (prev.id === contract.clientId) {
+        return {
+          ...prev,
+          totalSpent: (prev.totalSpent || 0) + approvedAmount,
+          completedProjects: isAllDone ? (prev.completedProjects || 0) + 1 : prev.completedProjects,
+        };
+      }
+      return prev;
+    });
+
+    const senderName = currentUser?.fullName || contract.clientName;
+    const senderId = currentUser?.id || contract.clientId;
+    
+    let content = isAllDone
+      ? `🎉 **Final Milestone Approved & Contract Completed!**\nAll milestones have been verified and escrow of $${approvedAmount.toLocaleString()} has been unlocked. Full project complete!`
+      : `🎉 **Milestone Approved!** Escrow of $${approvedAmount.toLocaleString()} has been unlocked and released for "${milestoneTitle}".`;
+
+    if (paymentProof) {
+      content += `\n💳 **Payment Proof Attached**: Mode: ${paymentProof.paymentMode?.toUpperCase() || 'UPI'} • UTR: ${paymentProof.transactionId || 'N/A'}`;
+    }
+
+    const msg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      orderId: contractId,
+      senderId,
+      senderName,
+      senderAvatar: currentUser?.avatarUrl || contract.clientAvatar,
+      senderRole: 'client',
+      content,
+      attachments: paymentProof?.proofUrl ? [paymentProof.proofUrl] : [],
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setMessages((prev) => [...prev, msg]);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      }).catch(() => {});
+
+      fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: nextContractStatus,
+          milestones: finalMilestones,
+          completedAt,
+        }),
+      }).catch(() => {});
+
+      if (isAllDone && contract.gigId) {
+        fetch(`${apiUrl}/api/marketplace/gigs/${contract.gigId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'completed' }),
+        }).catch(() => {});
+      }
+    } catch {}
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: contract.freelancerId,
+      type: 'milestone',
+      title: 'Escrow Payment Released! 💰',
+      body: `${senderName} approved "${milestoneTitle}". $${approvedAmount.toLocaleString()} has been credited.`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      targetView: 'contracts',
+    };
+    setNotifications((prev) => [notif, ...prev]);
+
+    addToast('success', 'Escrow Released!', `$${approvedAmount.toLocaleString()} successfully settled for milestone.`);
     triggerCelebration();
   }, [contracts, currentUser, addToast, triggerCelebration]);
 
   // Action: Request Revision
   const requestRevision = useCallback((contractId: string, milestoneId: string, reason: string) => {
-    let updatedMilestones: Milestone[] = [];
+    const contract = contracts.find((c) => c.id === contractId);
+    if (!contract) return;
+
+    const currentMilestones = contract.milestones && contract.milestones.length > 0 ? contract.milestones : [];
+    let matched = false;
+    const updatedMilestones = currentMilestones.map((m) => {
+      if (m.id === milestoneId) {
+        matched = true;
+        return { ...m, status: 'in_progress' as const };
+      }
+      return m;
+    });
+
+    if (!matched && updatedMilestones.length > 0) {
+      const subIdx = updatedMilestones.findIndex((m) => m.status === 'submitted');
+      const targetIdx = subIdx >= 0 ? subIdx : 0;
+      updatedMilestones[targetIdx] = {
+        ...updatedMilestones[targetIdx],
+        status: 'in_progress' as const,
+      };
+    }
 
     setContracts((prev) =>
-      prev.map((c) => {
-        if (c.id !== contractId) return c;
-        updatedMilestones = (c.milestones || []).map((m) =>
-          m.id === milestoneId ? { ...m, status: 'in_progress' as const } : m
-        );
-        return {
-          ...c,
-          status: 'revision_requested',
-          revisionCount: (c.revisionCount || 0) + 1,
-          milestones: updatedMilestones,
-        };
-      })
+      prev.map((c) =>
+        c.id === contractId
+          ? {
+              ...c,
+              status: 'revision_requested' as const,
+              revisionCount: (c.revisionCount || 0) + 1,
+              milestones: updatedMilestones,
+            }
+          : c
+      )
     );
 
-    const contract = contracts.find((c) => c.id === contractId);
-    if (contract) {
-      const senderName = currentUser?.fullName || contract.clientName;
-      const senderId = currentUser?.id || contract.clientId;
-      const msg: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        orderId: contractId,
-        senderId,
-        senderName,
-        senderAvatar: currentUser?.avatarUrl || contract.clientAvatar,
-        senderRole: 'client',
-        content: `🔄 **Revision Requested**: ${reason}`,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-      };
-      setMessages((prev) => [...prev, msg]);
+    const senderName = currentUser?.fullName || contract.clientName;
+    const senderId = currentUser?.id || contract.clientId;
+    const msg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      orderId: contractId,
+      senderId,
+      senderName,
+      senderAvatar: currentUser?.avatarUrl || contract.clientAvatar,
+      senderRole: 'client',
+      content: `🔄 **Revision Requested**: ${reason}`,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setMessages((prev) => [...prev, msg]);
 
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-        fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msg),
-        }).catch(() => {});
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      }).catch(() => {});
 
-        fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'revision_requested',
-            milestones: updatedMilestones,
-            revisionCount: (contract.revisionCount || 0) + 1,
-          }),
-        }).catch(() => {});
-      } catch {}
-    }
+      fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'revision_requested',
+          milestones: updatedMilestones,
+          revisionCount: (contract.revisionCount || 0) + 1,
+        }),
+      }).catch(() => {});
+    } catch {}
 
     addToast('info', 'Revision Requested', 'Feedback shared with freelancer for updates.');
   }, [contracts, currentUser, addToast]);
@@ -1585,65 +2262,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Action: Freelancer marks final work handover complete
   const markWorkHandoverComplete = useCallback((contractId: string, handoverNotes: string) => {
+    const contract = contracts.find((c) => c.id === contractId);
+    if (!contract) return;
+
     setContracts((prev) =>
-      prev.map((c) => {
-        if (c.id !== contractId) return c;
-        return {
-          ...c,
-          status: 'delivered' as const,
-          handoverNotes,
-          deliveredAt: new Date().toISOString(),
-        };
-      })
+      prev.map((c) =>
+        c.id === contractId
+          ? {
+              ...c,
+              status: 'delivered' as const,
+              handoverNotes,
+              deliveredAt: new Date().toISOString(),
+            }
+          : c
+      )
     );
 
-    const contract = contracts.find((c) => c.id === contractId);
-    if (contract) {
-      const senderName = currentUser?.fullName || contract.freelancerName;
-      const msg: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        orderId: contractId,
-        senderId: currentUser?.id || contract.freelancerId,
-        senderName,
-        senderAvatar: currentUser?.avatarUrl || contract.freelancerAvatar,
-        senderRole: 'freelancer',
-        content: `🏁 **Final Project Handover Submitted!**\n"${handoverNotes}"\nReady for client final review & escrow completion sign-off.`,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-      };
-      setMessages((prev) => [...prev, msg]);
+    const senderName = currentUser?.fullName || contract.freelancerName;
+    const msg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      orderId: contractId,
+      senderId: currentUser?.id || contract.freelancerId,
+      senderName,
+      senderAvatar: currentUser?.avatarUrl || contract.freelancerAvatar,
+      senderRole: 'freelancer',
+      content: `🏁 **Final Project Handover Submitted!**\n"${handoverNotes}"\nReady for client final review & escrow completion sign-off.`,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setMessages((prev) => [...prev, msg]);
 
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-        fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msg),
-        }).catch(() => {});
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      }).catch(() => {});
 
-        fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'delivered',
-            handoverNotes,
-            deliveredAt: new Date().toISOString(),
-          }),
-        }).catch(() => {});
-      } catch {}
+      fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'delivered',
+          handoverNotes,
+          deliveredAt: new Date().toISOString(),
+        }),
+      }).catch(() => {});
+    } catch {}
 
-      const notif: NotificationItem = {
-        id: `notif-${Date.now()}`,
-        userId: contract.clientId,
-        type: 'milestone',
-        title: 'Final Handover Submitted! 🏁',
-        body: `${senderName} submitted final project handover. Review deliverables to complete contract.`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        targetView: 'contracts',
-      };
-      setNotifications((prev) => [notif, ...prev]);
-    }
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: contract.clientId,
+      type: 'milestone',
+      title: 'Final Handover Submitted! 🏁',
+      body: `${senderName} submitted final project handover. Review deliverables to complete contract.`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      targetView: 'contracts',
+    };
+    setNotifications((prev) => [notif, ...prev]);
 
     addToast('success', 'Final Handover Submitted!', 'Client notified to sign off and close the contract.');
     triggerCelebration();
@@ -1651,104 +2329,114 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Action: Client signs off and completes contract with mutual rating & review
   const completeContract = useCallback((contractId: string, rating = 5, reviewText = 'Outstanding engineering execution and on-time delivery!') => {
-    let targetContract: OrderContract | undefined;
-    let updatedMilestones: Milestone[] = [];
+    const targetContract = contracts.find((c) => c.id === contractId);
+    if (!targetContract) return;
+
+    const currentMilestones = targetContract.milestones && targetContract.milestones.length > 0 ? targetContract.milestones : [];
+    const allApproved = currentMilestones.length > 0 && currentMilestones.every((m) => m.status === 'approved');
+
+    if (!allApproved) {
+      addToast(
+        'warning',
+        'Milestone Escrows Incomplete',
+        `All ${currentMilestones.length} milestone escrows must be individually submitted, approved, and released before signing off on the contract.`
+      );
+      return;
+    }
 
     setContracts((prev) =>
-      prev.map((c) => {
-        if (c.id !== contractId) return c;
-        targetContract = c;
-        updatedMilestones = (c.milestones || []).map((m) => ({
-          ...m,
-          status: 'approved' as const,
-          approvedAt: m.approvedAt || new Date().toISOString(),
-        }));
+      prev.map((c) =>
+        c.id === contractId
+          ? {
+              ...c,
+              status: 'completed' as const,
+              completedAt: new Date().toISOString(),
+              clientRating: rating,
+              clientReview: reviewText,
+            }
+          : c
+      )
+    );
 
+    const gigId = targetContract.gigId;
+    setGigs((prev) =>
+      prev.map((g) => (String(g.id).trim() === String(gigId).trim() ? { ...g, status: 'completed' as const } : g))
+    );
+
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      if (prev.id === targetContract?.freelancerId) {
         return {
-          ...c,
-          status: 'completed' as const,
-          milestones: updatedMilestones,
+          ...prev,
+          completedProjects: (prev.completedProjects || 0) + 1,
+          totalEarned: (prev.totalEarned || 0) + (targetContract?.amount || 0),
+          rating: rating,
+        };
+      }
+      if (prev.id === targetContract?.clientId) {
+        return {
+          ...prev,
+          completedProjects: (prev.completedProjects || 0) + 1,
+          totalSpent: (prev.totalSpent || 0) + (targetContract?.amount || 0),
+        };
+      }
+      return prev;
+    });
+
+    const senderName = currentUser?.fullName || targetContract.clientName;
+    const msg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      orderId: contractId,
+      senderId: currentUser?.id || targetContract.clientId,
+      senderName,
+      senderAvatar: currentUser?.avatarUrl || targetContract.clientAvatar,
+      senderRole: 'client',
+      content: `🏆 **Contract Successfully Completed & Closed!**\n⭐ Client Rating: ${rating}/5 Stars\n💬 Review: "${reviewText}"\nAll escrow funds have been 100% disbursed. Thank you for the collaboration!`,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    setMessages((prev) => [...prev, msg]);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      }).catch(() => {});
+
+      fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'completed',
+          milestones: currentMilestones,
           completedAt: new Date().toISOString(),
           clientRating: rating,
           clientReview: reviewText,
-        };
-      })
-    );
+        }),
+      }).catch(() => {});
 
-    if (targetContract) {
-      const gigId = targetContract.gigId;
-      setGigs((prev) =>
-        prev.map((g) => (String(g.id).trim() === String(gigId).trim() ? { ...g, status: 'completed' as const } : g))
-      );
-
-      // Increment stats in currentUser
-      setCurrentUser((prev) => {
-        if (!prev) return prev;
-        if (prev.id === targetContract?.freelancerId) {
-          return {
-            ...prev,
-            completedProjects: (prev.completedProjects || 0) + 1,
-            totalEarned: (prev.totalEarned || 0) + (targetContract?.amount || 0),
-            rating: rating,
-          };
-        }
-        if (prev.id === targetContract?.clientId) {
-          return {
-            ...prev,
-            completedProjects: (prev.completedProjects || 0) + 1,
-            totalSpent: (prev.totalSpent || 0) + (targetContract?.amount || 0),
-          };
-        }
-        return prev;
-      });
-
-      const senderName = currentUser?.fullName || targetContract.clientName;
-      const msg: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        orderId: contractId,
-        senderId: currentUser?.id || targetContract.clientId,
-        senderName,
-        senderAvatar: currentUser?.avatarUrl || targetContract.clientAvatar,
-        senderRole: 'client',
-        content: `🏆 **Contract Successfully Completed & Closed!**\n⭐ Client Rating: ${rating}/5 Stars\n💬 Review: "${reviewText}"\nAll escrow funds have been 100% disbursed. Thank you for the collaboration!`,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-      };
-      setMessages((prev) => [...prev, msg]);
-
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-        fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msg),
-        }).catch(() => {});
-
-        fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+      if (gigId) {
+        fetch(`${apiUrl}/api/marketplace/gigs/${gigId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'completed',
-            milestones: updatedMilestones,
-            completedAt: new Date().toISOString(),
-            clientRating: rating,
-            clientReview: reviewText,
-          }),
+          body: JSON.stringify({ status: 'completed' }),
         }).catch(() => {});
-      } catch {}
+      }
+    } catch {}
 
-      const notif: NotificationItem = {
-        id: `notif-${Date.now()}`,
-        userId: targetContract.freelancerId,
-        type: 'contract',
-        title: 'Contract Successfully Completed! 🏆',
-        body: `${senderName} approved final handover and rated you ${rating}★! Escrow is 100% unlocked.`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        targetView: 'contracts',
-      };
-      setNotifications((prev) => [notif, ...prev]);
-    }
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: targetContract.freelancerId,
+      type: 'contract',
+      title: 'Contract Successfully Completed! 🏆',
+      body: `${senderName} approved final handover and rated you ${rating}★! Escrow is 100% unlocked.`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      targetView: 'contracts',
+    };
+    setNotifications((prev) => [notif, ...prev]);
 
     addToast('success', 'Contract Completed!', '100% of escrow disbursed and rating submitted.');
     triggerCelebration();
@@ -1783,13 +2471,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setVerifications((prev) => {
-      const filtered = (prev || []).filter((v) => v.id !== newVerif.id && v.userId !== newVerif.userId);
+      const filtered = (prev || []).filter(
+        (v) =>
+          v.id !== newVerif.id &&
+          v.userId !== newVerif.userId &&
+          (v.userEmail || '').toLowerCase() !== (newVerif.userEmail || '').toLowerCase()
+      );
       const updated = [newVerif, ...filtered];
       try {
         localStorage.setItem(STORAGE_KEYS.VERIFICATIONS, JSON.stringify(updated));
       } catch {}
       return updated;
     });
+
+    // Keep currentUser unverified until admin approves
+    if (currentUser && currentUser.role === 'freelancer') {
+      setCurrentUser((prev) => (prev ? { ...prev, isVerified: false } : null));
+    }
 
     // Backend sync
     try {
@@ -1804,7 +2502,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .catch(() => {});
     } catch {}
 
-    addToast('success', 'Verification Submitted!', 'Admin team will review your credentials.');
+    addToast('success', 'Verification Submitted! ⏳', 'Queued for Platform Administrator review and approval.');
     triggerCelebration();
     return newVerif;
   }, [currentUser, addToast, triggerCelebration, fetchGigsFromBackend]);
@@ -1813,12 +2511,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const reviewVerification = useCallback((verificationId: string, status: 'approved' | 'rejected' | 'under_review', adminComment: string) => {
     let candidateName = '';
     let candidateId = '';
+    let candidateEmail = '';
 
     setVerifications((prev) => {
       const updated = prev.map((v) => {
-        if (String(v.id).trim() === String(verificationId).trim()) {
+        if (
+          String(v.id).trim() === String(verificationId).trim() ||
+          String(v.userId).trim() === String(verificationId).trim()
+        ) {
           candidateName = v.userName;
           candidateId = v.userId;
+          candidateEmail = v.userEmail || '';
           return {
             ...v,
             status,
@@ -1836,7 +2539,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     // If current logged-in user is the candidate, grant/revoke verified badge
-    if (candidateId && currentUser?.id === candidateId) {
+    if (
+      currentUser &&
+      (currentUser.id === candidateId ||
+        (candidateEmail && currentUser.email?.toLowerCase() === candidateEmail.toLowerCase()))
+    ) {
       setCurrentUser((prev) => (prev ? { ...prev, isVerified: status === 'approved' } : null));
     }
 
@@ -1854,9 +2561,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
 
     addToast(
-      status === 'approved' ? 'success' : 'info',
-      `Verification ${status.toUpperCase()}`,
-      `Candidate ${candidateName || 'specialist'} was updated.`
+      status === 'approved' ? 'success' : status === 'rejected' ? 'warning' : 'info',
+      `Verification ${status === 'approved' ? 'Approved & Granted ⭐' : status === 'rejected' ? 'Rejected' : 'Under Review'}`,
+      `Candidate ${candidateName || 'specialist'} status updated.`
     );
     if (status === 'approved') {
       triggerCelebration();
@@ -1944,6 +2651,743 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   }, [currentUser]);
 
+  // Support Desk Actions
+  const openSupportModal = useCallback((ticketId?: string) => {
+    if (ticketId) {
+      setActiveSupportTicketId(ticketId);
+    }
+    setIsSupportModalOpen(true);
+  }, []);
+
+  const createSupportTicket = useCallback(
+    async (data: {
+      subject: string;
+      category: TicketCategory;
+      priority: TicketPriority;
+      description: string;
+      contractId?: string;
+      contractTitle?: string;
+      gigId?: string;
+      gigTitle?: string;
+      attachments?: string[];
+    }): Promise<SupportTicket | null> => {
+      if (!currentUser) {
+        addToast('error', 'Authentication Required', 'Please log in to submit a support ticket.');
+        return null;
+      }
+
+      const ticketId = `ticket-${Date.now()}`;
+      const ticketNumber = `#TCK-${Math.floor(1000 + Math.random() * 9000)}`;
+      const now = new Date().toISOString();
+
+      const initialMsg: SupportTicketMessage = {
+        id: `msg-tck-${Date.now()}`,
+        ticketId,
+        senderId: currentUser.id,
+        senderName: currentUser.fullName,
+        senderRole: currentUser.role,
+        senderAvatar: currentUser.avatarUrl,
+        content: data.description,
+        attachments: data.attachments || [],
+        createdAt: now,
+      };
+
+      const autoBotMsg: SupportTicketMessage = {
+        id: `msg-tck-${Date.now() + 2}`,
+        ticketId,
+        senderId: 'system-support-bot',
+        senderName: 'FreelanceStack Support Bot',
+        senderRole: 'support_agent',
+        senderAvatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=support-ai-bot',
+        content: `👋 Hello ${currentUser.fullName}! We have received your query regarding "${data.subject}" (Ticket ID: ${ticketNumber}). A Platform Administrator has been assigned to assist you. Typical response time is under 15 minutes.`,
+        createdAt: new Date(Date.now() + 500).toISOString(),
+      };
+
+      const newTicket: SupportTicket = {
+        id: ticketId,
+        ticketNumber,
+        userId: currentUser.id,
+        userName: currentUser.fullName,
+        userEmail: currentUser.email,
+        userRole: currentUser.role,
+        userAvatar: currentUser.avatarUrl,
+        subject: data.subject,
+        category: data.category,
+        priority: data.priority,
+        status: 'open',
+        description: data.description,
+        contractId: data.contractId,
+        contractTitle: data.contractTitle,
+        gigId: data.gigId,
+        gigTitle: data.gigTitle,
+        attachments: data.attachments || [],
+        messages: [initialMsg, autoBotMsg],
+        adminNotes: '',
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      setTickets((prev) => {
+        const updated = [newTicket, ...(prev || [])];
+        try {
+          localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      addToast('success', 'Support Ticket Created', `Ticket ${ticketNumber} is active. Our support team has been notified.`);
+      setActiveSupportTicketId(newTicket.id);
+
+      // Backend sync
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        const res = await fetch(`${apiUrl}/api/marketplace/tickets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: currentUser.id,
+            userName: currentUser.fullName,
+            userEmail: currentUser.email,
+            userRole: currentUser.role,
+            userAvatar: currentUser.avatarUrl,
+            ...data,
+          }),
+        });
+        if (res.ok) {
+          const resData = await res.json();
+          if (resData && resData.ticket) {
+            const synced = normalizeTicket(resData.ticket);
+            setTickets((prev) => prev.map((t) => (t.id === newTicket.id ? synced : t)));
+            return synced;
+          }
+        }
+      } catch {}
+
+      return newTicket;
+    },
+    [currentUser, addToast]
+  );
+
+  const sendTicketMessage = useCallback(
+    async (ticketId: string, content: string, attachments?: string[]) => {
+      if (!currentUser) return;
+      const now = new Date().toISOString();
+      const newMsg: SupportTicketMessage = {
+        id: `msg-tck-${Date.now()}`,
+        ticketId,
+        senderId: currentUser.id,
+        senderName: currentUser.role === 'admin' ? 'Master Administrator' : currentUser.fullName,
+        senderRole: currentUser.role,
+        senderAvatar: currentUser.avatarUrl || (currentUser.role === 'admin' ? 'https://api.dicebear.com/7.x/bottts/svg?seed=admin-governance-shield' : undefined),
+        content,
+        attachments: attachments || [],
+        createdAt: now,
+      };
+
+      setTickets((prev) => {
+        const updated = (prev || []).map((t) => {
+          if (String(t.id).trim() === String(ticketId).trim()) {
+            const newStatus =
+              currentUser.role === 'admin'
+                ? t.status === 'open'
+                  ? 'in_progress'
+                  : t.status
+                : t.status === 'resolved' || t.status === 'closed'
+                ? 'open'
+                : t.status;
+            return {
+              ...t,
+              status: newStatus,
+              updatedAt: now,
+              messages: [...(t.messages || []), newMsg],
+            };
+          }
+          return t;
+        });
+        try {
+          localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // Backend sync
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        await fetch(`${apiUrl}/api/marketplace/tickets/${ticketId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            senderId: newMsg.senderId,
+            senderName: newMsg.senderName,
+            senderRole: newMsg.senderRole,
+            senderAvatar: newMsg.senderAvatar,
+            content,
+            attachments,
+          }),
+        });
+      } catch {}
+    },
+    [currentUser]
+  );
+
+  const adminUpdateTicket = useCallback(
+    async (ticketId: string, data: { status?: TicketStatus; priority?: TicketPriority; adminNotes?: string }) => {
+      const now = new Date().toISOString();
+      setTickets((prev) => {
+        const updated = (prev || []).map((t) => {
+          if (String(t.id).trim() === String(ticketId).trim()) {
+            return {
+              ...t,
+              ...data,
+              updatedAt: now,
+              resolvedAt: data.status === 'resolved' ? now : t.resolvedAt,
+            };
+          }
+          return t;
+        });
+        try {
+          localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      addToast('info', 'Ticket Updated', `Ticket status updated to ${data.status || 'saved'}.`);
+
+      // Backend sync
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        await fetch(`${apiUrl}/api/marketplace/tickets/${ticketId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+      } catch {}
+    },
+    [addToast]
+  );
+
+  // Collaboration & Domain Network Engine
+  const getCollaborationBetween = useCallback(
+    (clientId?: string, freelancerId?: string, domain?: string): CollaborationHistory | null => {
+      if (!clientId || !freelancerId) return null;
+      const matchingContracts = (contracts || []).filter((c) => {
+        const isClientMatch = String(c.clientId).trim() === String(clientId).trim();
+        const isFreelancerMatch = String(c.freelancerId).trim() === String(freelancerId).trim();
+        if (!isClientMatch || !isFreelancerMatch) return false;
+        if (domain) {
+          const contractDomain = (c.categoryName || '').toLowerCase();
+          const targetDomain = domain.toLowerCase();
+          if (!contractDomain.includes(targetDomain) && !targetDomain.includes(contractDomain)) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      if (matchingContracts.length === 0) return null;
+
+      const completedList = matchingContracts.filter(
+        (c) => c.status === 'completed' || (c.milestones || []).some((m) => m.status === 'approved')
+      );
+      if (completedList.length === 0) return null;
+
+      const first = completedList[0];
+      const totalAmount = completedList.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+      const ratings = completedList.map((c) => c.clientRating).filter((r): r is number => typeof r === 'number');
+      const averageRating = ratings.length > 0 ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : 5.0;
+
+      return {
+        partnerId: freelancerId,
+        partnerName: first.freelancerName,
+        partnerAvatar: first.freelancerAvatar,
+        partnerRole: 'freelancer',
+        partnerTitle: 'Verified Repeat Partner',
+        isVerified: true,
+        domain: first.categoryName || domain || 'Full-Stack Architecture',
+        completedContractsCount: completedList.length,
+        totalAmount,
+        lastCollaboratedAt: completedList[0].completedAt || completedList[0].createdAt,
+        contractTitles: completedList.map((c) => c.gigTitle),
+        ratingsGiven: ratings,
+        averageRating,
+      };
+    },
+    [contracts]
+  );
+
+  const getRepeatCollaboratorsForClient = useCallback(
+    (clientId?: string): CollaborationHistory[] => {
+      const targetClientId = clientId || currentUser?.id;
+      if (!targetClientId) return [];
+
+      const clientContracts = (contracts || []).filter(
+        (c) => String(c.clientId).trim() === String(targetClientId).trim()
+      );
+
+      const freelancerMap = new Map<string, { contracts: OrderContract[]; domain: string }>();
+
+      for (const c of clientContracts) {
+        const fId = String(c.freelancerId).trim();
+        if (!fId || fId === 'freelancer-unknown') continue;
+        const existing = freelancerMap.get(fId) || { contracts: [], domain: c.categoryName || 'Full-Stack Architecture' };
+        existing.contracts.push(c);
+        freelancerMap.set(fId, existing);
+      }
+
+      const results: CollaborationHistory[] = [];
+      freelancerMap.forEach((entry, fId) => {
+        const first = entry.contracts[0];
+        const totalAmount = entry.contracts.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+        const ratings = entry.contracts.map((c) => c.clientRating).filter((r): r is number => typeof r === 'number');
+        const averageRating = ratings.length > 0 ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : 5.0;
+
+        results.push({
+          partnerId: fId,
+          partnerName: first.freelancerName,
+          partnerAvatar: first.freelancerAvatar,
+          partnerRole: 'freelancer',
+          partnerTitle: 'Verified Specialist',
+          isVerified: true,
+          domain: first.categoryName || entry.domain || 'Full-Stack Architecture',
+          completedContractsCount: entry.contracts.length,
+          totalAmount,
+          lastCollaboratedAt: entry.contracts[0].completedAt || entry.contracts[0].createdAt,
+          contractTitles: entry.contracts.map((c) => c.gigTitle),
+          ratingsGiven: ratings,
+          averageRating,
+        });
+      });
+
+      return results;
+    },
+    [contracts, currentUser]
+  );
+
+  const getRepeatClientsForFreelancer = useCallback(
+    (freelancerId?: string): CollaborationHistory[] => {
+      const targetFreelancerId = freelancerId || currentUser?.id;
+      if (!targetFreelancerId) return [];
+
+      const freelancerContracts = (contracts || []).filter(
+        (c) => String(c.freelancerId).trim() === String(targetFreelancerId).trim()
+      );
+
+      const clientMap = new Map<string, { contracts: OrderContract[]; domain: string }>();
+
+      for (const c of freelancerContracts) {
+        const cId = String(c.clientId).trim();
+        if (!cId || cId === 'client-unknown') continue;
+        const existing = clientMap.get(cId) || { contracts: [], domain: c.categoryName || 'Full-Stack Architecture' };
+        existing.contracts.push(c);
+        clientMap.set(cId, existing);
+      }
+
+      const results: CollaborationHistory[] = [];
+      clientMap.forEach((entry, cId) => {
+        const first = entry.contracts[0];
+        const totalAmount = entry.contracts.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+        results.push({
+          partnerId: cId,
+          partnerName: first.clientName,
+          partnerAvatar: first.clientAvatar,
+          partnerRole: 'client',
+          partnerTitle: 'Enterprise Client',
+          isVerified: true,
+          domain: first.categoryName || entry.domain || 'Full-Stack Architecture',
+          completedContractsCount: entry.contracts.length,
+          totalAmount,
+          lastCollaboratedAt: entry.contracts[0].completedAt || entry.contracts[0].createdAt,
+          contractTitles: entry.contracts.map((c) => c.gigTitle),
+        });
+      });
+
+      return results;
+    },
+    [contracts, currentUser]
+  );
+
+  const createDirectContract = useCallback(
+    async (data: {
+      freelancerId: string;
+      freelancerName?: string;
+      freelancerAvatar?: string;
+      title: string;
+      categoryName: string;
+      amount: number;
+      deadline?: string;
+      milestones?: { title: string; amount: number }[];
+      note?: string;
+    }): Promise<OrderContract | null> => {
+      if (!currentUser) {
+        addToast('error', 'Authentication Required', 'Please log in to initiate a direct contract.');
+        return null;
+      }
+
+      const contractId = `contract-direct-${Date.now()}`;
+      const rawAmount = Number(data.amount) || 1500;
+      const dl = data.deadline || new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0];
+
+      const rawMilestones: Milestone[] =
+        data.milestones && data.milestones.length > 0
+          ? data.milestones.map((m, idx) => ({
+              id: `m-${contractId}-${idx}`,
+              title: m.title,
+              amount: Number(m.amount),
+              status: 'pending' as const,
+              deadline: new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
+              paymentStatus: 'unpaid' as const,
+            }))
+          : [
+              {
+                id: `m-${contractId}-0`,
+                title: 'Phase 1: Architecture, Wireframes & Core Specs',
+                amount: Math.round(rawAmount * 0.4),
+                status: 'pending' as const,
+                deadline: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+                paymentStatus: 'unpaid' as const,
+              },
+              {
+                id: `m-${contractId}-1`,
+                title: 'Phase 2: Core Engineering Implementation & API',
+                amount: Math.round(rawAmount * 0.4),
+                status: 'pending' as const,
+                deadline: new Date(Date.now() + 12 * 86400000).toISOString().split('T')[0],
+                paymentStatus: 'unpaid' as const,
+              },
+              {
+                id: `m-${contractId}-2`,
+                title: 'Phase 3: Production Polish, QA & Handover',
+                amount: rawAmount - Math.round(rawAmount * 0.4) * 2,
+                status: 'pending' as const,
+                deadline: dl,
+                paymentStatus: 'unpaid' as const,
+              },
+            ];
+
+      const newContract: OrderContract = {
+        id: contractId,
+        gigId: `direct-gig-${Date.now()}`,
+        gigTitle: data.title,
+        categoryId: data.categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        categoryName: data.categoryName,
+        clientId: currentUser.id,
+        clientName: currentUser.fullName,
+        clientAvatar: currentUser.avatarUrl,
+        freelancerId: data.freelancerId,
+        freelancerName: data.freelancerName || 'Trusted Partner',
+        freelancerAvatar: data.freelancerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+        status: 'pending_acceptance',
+        amount: rawAmount,
+        escrowFunded: true,
+        deadline: dl,
+        createdAt: new Date().toISOString(),
+        revisionCount: 0,
+        milestones: rawMilestones,
+        deliverables: [],
+        handoverNotes: data.note,
+        isDirectAssignment: true,
+        invitationNote: data.note,
+        clientAccepted: true,
+        freelancerAccepted: false,
+      };
+
+      setContracts((prev) => {
+        const updated = [newContract, ...(prev || [])];
+        try {
+          localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // Initial chat invitation message
+      const initialChatMsg: ChatMessage = {
+        id: `msg-direct-${Date.now()}`,
+        orderId: contractId,
+        senderId: currentUser.id,
+        senderName: currentUser.fullName,
+        senderAvatar: currentUser.avatarUrl,
+        senderRole: 'client',
+        content: `📜 **Direct Contract Offer Extended**\n` +
+          `Client **${currentUser.fullName}** has assigned this contract to **${data.freelancerName || 'Specialist'}** with **$${rawAmount.toLocaleString()} escrow vaulted**.\n\n` +
+          `• **Domain**: ${data.categoryName}\n` +
+          `• **Target Deadline**: ${dl}\n` +
+          `${data.note ? `• **Scope Note**: ${data.note}\n` : ''}` +
+          `\n⏳ *Freelancer review and mutual acceptance required before work milestones commence.*`,
+        createdAt: new Date().toISOString(),
+        isRead: false,
+      };
+
+      setMessages((prev) => {
+        const updated = [...(prev || []), initialChatMsg];
+        try {
+          localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // Send notification to freelancer
+      const notif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: data.freelancerId,
+        type: 'contract',
+        title: 'New Direct Contract Offer! 📜',
+        body: `${currentUser.fullName} assigned you "${data.title}" ($${rawAmount.toLocaleString()} escrow funded). Review & accept terms to begin.`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        targetView: 'contracts',
+      };
+      setNotifications((prev) => [notif, ...prev]);
+
+      // Sync to backend
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        fetch(`${apiUrl}/api/marketplace/contracts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newContract),
+        }).catch(() => {});
+      } catch {}
+
+      return newContract;
+    },
+    [currentUser, addToast]
+  );
+
+  // Mutual Acceptance Action: Freelancer accepts direct contract offer
+  const acceptContractOffer = useCallback(
+    async (contractId: string) => {
+      const contract = contracts.find((c) => c.id === contractId);
+      if (!contract) return;
+
+      const currentMilestones = contract.milestones || [];
+      const updatedMilestones = currentMilestones.map((m, idx) => ({
+        ...m,
+        status: idx === 0 ? ('in_progress' as const) : m.status,
+      }));
+
+      const now = new Date().toISOString();
+      setContracts((prev) =>
+        prev.map((c) =>
+          c.id === contractId
+            ? {
+                ...c,
+                status: 'in_progress' as const,
+                freelancerAccepted: true,
+                acceptedAt: now,
+                milestones: updatedMilestones,
+              }
+            : c
+        )
+      );
+
+      const senderName = currentUser?.fullName || contract.freelancerName;
+      const msg: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        orderId: contractId,
+        senderId: currentUser?.id || contract.freelancerId,
+        senderName,
+        senderAvatar: currentUser?.avatarUrl || contract.freelancerAvatar,
+        senderRole: 'freelancer',
+        content: `🎉 **Direct Contract Accepted & Mutual Agreement Finalized!**\n` +
+          `Freelancer **${contract.freelancerName}** has accepted the contract terms and milestone schedule. Work is officially underway and Milestone #1 is now **IN PROGRESS**!`,
+        createdAt: now,
+        isRead: false,
+      };
+      setMessages((prev) => [...prev, msg]);
+
+      const notif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: contract.clientId,
+        type: 'contract',
+        title: 'Contract Offer Accepted! 🤝',
+        body: `${senderName} has accepted your direct contract for "${contract.gigTitle}". Project is active!`,
+        isRead: false,
+        createdAt: now,
+        targetView: 'contracts',
+      };
+      setNotifications((prev) => [notif, ...prev]);
+
+      // Backend sync
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(msg),
+        }).catch(() => {});
+
+        fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'in_progress',
+            freelancerAccepted: true,
+            acceptedAt: now,
+            milestones: updatedMilestones,
+          }),
+        }).catch(() => {});
+      } catch {}
+
+      addToast('success', 'Contract Accepted! 🚀', 'Mutual agreement verified. Milestone #1 is now active.');
+      triggerCelebration();
+    },
+    [contracts, currentUser, addToast, triggerCelebration]
+  );
+
+  // Mutual Acceptance Action: Freelancer declines direct contract offer
+  const declineContractOffer = useCallback(
+    async (contractId: string, reason?: string) => {
+      const contract = contracts.find((c) => c.id === contractId);
+      if (!contract) return;
+
+      const now = new Date().toISOString();
+      setContracts((prev) =>
+        prev.map((c) =>
+          c.id === contractId
+            ? {
+                ...c,
+                status: 'cancelled' as const,
+                freelancerAccepted: false,
+                declinedAt: now,
+                declineReason: reason,
+              }
+            : c
+        )
+      );
+
+      const senderName = currentUser?.fullName || contract.freelancerName;
+      const msg: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        orderId: contractId,
+        senderId: currentUser?.id || contract.freelancerId,
+        senderName,
+        senderAvatar: currentUser?.avatarUrl || contract.freelancerAvatar,
+        senderRole: 'freelancer',
+        content: `❌ **Contract Offer Declined**\n` +
+          `Freelancer **${contract.freelancerName}** declined this direct contract offer.\n` +
+          `${reason ? `• Reason: ${reason}\n` : ''}` +
+          `• Vaulted Escrow: $${contract.amount.toLocaleString()} is refunded to client.`,
+        createdAt: now,
+        isRead: false,
+      };
+      setMessages((prev) => [...prev, msg]);
+
+      const notif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: contract.clientId,
+        type: 'contract',
+        title: 'Contract Offer Declined',
+        body: `${senderName} declined the direct contract for "${contract.gigTitle}". Escrow refunded.`,
+        isRead: false,
+        createdAt: now,
+        targetView: 'contracts',
+      };
+      setNotifications((prev) => [notif, ...prev]);
+
+      // Backend sync
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(msg),
+        }).catch(() => {});
+
+        fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'cancelled',
+            freelancerAccepted: false,
+            declinedAt: now,
+            declineReason: reason,
+          }),
+        }).catch(() => {});
+      } catch {}
+
+      addToast('info', 'Offer Declined', 'Contract marked as cancelled and client notified.');
+    },
+    [contracts, currentUser, addToast]
+  );
+
+  // Client Action: Cancel/Withdraw pending direct contract offer
+  const cancelContractOffer = useCallback(
+    async (contractId: string) => {
+      const contract = contracts.find((c) => c.id === contractId);
+      if (!contract) return;
+
+      const now = new Date().toISOString();
+      setContracts((prev) =>
+        prev.map((c) =>
+          c.id === contractId
+            ? {
+                ...c,
+                status: 'cancelled' as const,
+              }
+            : c
+        )
+      );
+
+      const senderName = currentUser?.fullName || contract.clientName;
+      const msg: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        orderId: contractId,
+        senderId: currentUser?.id || contract.clientId,
+        senderName,
+        senderAvatar: currentUser?.avatarUrl || contract.clientAvatar,
+        senderRole: 'client',
+        content: `🚫 **Contract Offer Withdrawn by Client**\n` +
+          `Client **${senderName}** has cancelled the pending contract invitation. Escrow funds refunded.`,
+        createdAt: now,
+        isRead: false,
+      };
+      setMessages((prev) => [...prev, msg]);
+
+      // Backend sync
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(msg),
+        }).catch(() => {});
+
+        fetch(`${apiUrl}/api/marketplace/contracts/${contractId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'cancelled',
+          }),
+        }).catch(() => {});
+      } catch {}
+
+      addToast('info', 'Offer Withdrawn', 'Direct contract invitation cancelled and escrow refunded.');
+    },
+    [contracts, currentUser, addToast]
+  );
+
+  // Invoice modal trigger
+  const openInvoiceModal = useCallback(
+    (contractId?: string) => {
+      if (contractId) {
+        setActiveInvoiceContractId(contractId);
+      } else if (selectedContractId) {
+        setActiveInvoiceContractId(selectedContractId);
+      } else if (contracts && contracts.length > 0) {
+        setActiveInvoiceContractId(contracts[0].id);
+      }
+      setIsInvoiceModalOpen(true);
+    },
+    [selectedContractId, contracts]
+  );
+
+  // Direct Contract Modal trigger
+  const openDirectContractModal = useCallback((partner: Persona | CollaborationHistory) => {
+    setDirectContractFreelancer(partner);
+    setIsDirectContractModalOpen(true);
+  }, []);
+
   // Notification helpers
   const markNotificationRead = useCallback((id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
@@ -1963,6 +3407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       contracts,
       messages,
       verifications,
+      tickets,
       notifications,
       toasts,
       activeView,
@@ -1988,6 +3433,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       declineBid,
       submitDeliverable,
       approveMilestoneAndReleaseEscrow,
+      updateFreelancerPaymentDetails,
+      submitMilestonePaymentProof,
+      confirmMilestonePayment,
       markWorkHandoverComplete,
       completeContract,
       requestRevision,
@@ -1996,6 +3444,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       adminUpdateGig,
       adminUpdateContract,
       sendMessage,
+      isSupportModalOpen,
+      setIsSupportModalOpen,
+      activeSupportTicketId,
+      setActiveSupportTicketId,
+      openSupportModal,
+      createSupportTicket,
+      sendTicketMessage,
+      adminUpdateTicket,
+      getCollaborationBetween,
+      getRepeatCollaboratorsForClient,
+      getRepeatClientsForFreelancer,
+      createDirectContract,
+      acceptContractOffer,
+      declineContractOffer,
+      cancelContractOffer,
+      isInvoiceModalOpen,
+      setIsInvoiceModalOpen,
+      activeInvoiceContractId,
+      setActiveInvoiceContractId,
+      openInvoiceModal,
+      isDirectContractModalOpen,
+      setIsDirectContractModalOpen,
+      directContractFreelancer,
+      setDirectContractFreelancer,
+      openDirectContractModal,
       markNotificationRead,
       markAllNotificationsRead,
       addToast,
@@ -2010,6 +3483,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       contracts,
       messages,
       verifications,
+      tickets,
       notifications,
       toasts,
       activeView,
@@ -2030,6 +3504,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       declineBid,
       submitDeliverable,
       approveMilestoneAndReleaseEscrow,
+      updateFreelancerPaymentDetails,
+      submitMilestonePaymentProof,
+      confirmMilestonePayment,
       markWorkHandoverComplete,
       completeContract,
       requestRevision,
@@ -2038,6 +3515,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       adminUpdateGig,
       adminUpdateContract,
       sendMessage,
+      isSupportModalOpen,
+      activeSupportTicketId,
+      openSupportModal,
+      createSupportTicket,
+      sendTicketMessage,
+      adminUpdateTicket,
+      getCollaborationBetween,
+      getRepeatCollaboratorsForClient,
+      getRepeatClientsForFreelancer,
+      createDirectContract,
+      acceptContractOffer,
+      declineContractOffer,
+      cancelContractOffer,
+      isInvoiceModalOpen,
+      activeInvoiceContractId,
+      openInvoiceModal,
+      isDirectContractModalOpen,
+      directContractFreelancer,
+      openDirectContractModal,
       markNotificationRead,
       markAllNotificationsRead,
       addToast,

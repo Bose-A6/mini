@@ -13,8 +13,11 @@ import {
   Filter,
   RefreshCw,
   MessageSquare,
+  LifeBuoy,
+  ShieldCheck,
 } from 'lucide-react';
 import { GigDetailModal } from '../Marketplace/GigDetailModal';
+import { mockPersonas } from '../../data/mockData';
 
 export const ClientDashboard: React.FC = () => {
   const {
@@ -30,6 +33,11 @@ export const ClientDashboard: React.FC = () => {
     selectedGigId,
     setSelectedGigId,
     setSelectedContractId,
+    openSupportModal,
+    openInvoiceModal,
+    openDirectContractModal,
+    getRepeatCollaboratorsForClient,
+    getCollaborationBetween,
     setIsAuthModalOpen,
     setAuthMode,
     isSyncingGigs,
@@ -37,7 +45,7 @@ export const ClientDashboard: React.FC = () => {
     addToast,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'my-gigs' | 'proposals' | 'post-gig'>('my-gigs');
+  const [activeTab, setActiveTab] = useState<'my-gigs' | 'proposals' | 'trusted-partners' | 'post-gig'>('my-gigs');
   const [projectStatusFilter, setProjectStatusFilter] = useState<'all' | 'open' | 'awarded' | 'completed'>('all');
   const [selectedGigFilter, setSelectedGigFilter] = useState<string>('all');
 
@@ -51,29 +59,25 @@ export const ClientDashboard: React.FC = () => {
   const [description, setDescription] = useState('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
-  // Client's gigs and proposals
+  // Client's gigs and proposals - strictly belonging to this authenticated client
   const clientGigs = useMemo(() => {
-    if (!gigs || gigs.length === 0) return [];
-    if (!currentUser) return gigs;
-    const myGigs = gigs.filter(
-      (g) =>
-        String(g.clientId).trim() === String(currentUser.id).trim() ||
-        g.clientName?.toLowerCase() === currentUser.fullName?.toLowerCase() ||
-        g.clientId === 'client-1' ||
-        g.clientId === 'client-2' ||
-        g.clientId === 'client-verified' ||
-        g.clientId === 'client-edge-lab' ||
-        g.clientId.startsWith('client-')
-    );
-    return myGigs.length > 0 ? myGigs : gigs;
+    if (!gigs || gigs.length === 0 || !currentUser) return [];
+    return gigs.filter((g) => String(g.clientId).trim() === String(currentUser.id).trim());
   }, [gigs, currentUser]);
 
   const filteredClientGigs = useMemo(() => {
     if (projectStatusFilter === 'all') return clientGigs;
-    return clientGigs.filter((g) => (g.status || 'open') === projectStatusFilter);
-  }, [clientGigs, projectStatusFilter]);
+    return clientGigs.filter((g) => {
+      const isGigCompleted =
+        g.status === 'completed' ||
+        (contracts || []).some((c) => String(c.gigId).trim() === String(g.id).trim() && c.status === 'completed');
+      const effectiveStatus = isGigCompleted ? 'completed' : (g.status || 'open');
+      return effectiveStatus === projectStatusFilter;
+    });
+  }, [clientGigs, projectStatusFilter, contracts]);
 
   const incomingBids = useMemo(() => {
+    if (!currentUser || clientGigs.length === 0) return [];
     return (bids || []).filter((b) => {
       const isPending = (b.status || 'pending') === 'pending';
       if (!isPending) return false;
@@ -83,20 +87,28 @@ export const ClientDashboard: React.FC = () => {
         return cleanBidGigId === String(selectedGigFilter).trim();
       }
 
-      // If viewing all, match gigs owned by this client
-      const matchingGig = (gigs || []).find((g) => String(g.id).trim() === cleanBidGigId);
-      if (currentUser && matchingGig) {
-        return String(matchingGig.clientId).trim() === String(currentUser.id).trim() ||
-               matchingGig.clientName?.toLowerCase() === currentUser.fullName?.toLowerCase() ||
-               clientGigs.some((cg) => String(cg.id).trim() === String(matchingGig.id).trim());
-      }
-      return true;
+      // Match ONLY proposals submitted on this client's posted projects
+      return clientGigs.some((cg) => String(cg.id).trim() === cleanBidGigId);
     });
-  }, [bids, selectedGigFilter, currentUser, gigs, clientGigs]);
+  }, [bids, selectedGigFilter, currentUser, clientGigs]);
+
+  const allClientContracts = useMemo(() => {
+    if (!currentUser) return [];
+    return (contracts || []).filter((c) => String(c.clientId).trim() === String(currentUser.id).trim());
+  }, [contracts, currentUser]);
 
   const activeContracts = useMemo(() => {
-    return (contracts || []).filter((c) => (currentUser && String(c.clientId).trim() === String(currentUser.id).trim()) || !currentUser);
-  }, [contracts, currentUser]);
+    return allClientContracts.filter((c) => c.status !== 'completed');
+  }, [allClientContracts]);
+
+  const completedContracts = useMemo(() => {
+    return allClientContracts.filter((c) => c.status === 'completed');
+  }, [allClientContracts]);
+
+  const repeatCollaborators = useMemo(() => {
+    if (!currentUser) return [];
+    return getRepeatCollaboratorsForClient(currentUser.id);
+  }, [getRepeatCollaboratorsForClient, currentUser]);
 
   // AI Scope Generator (assists real clients to write structured briefs)
   const handleAiScopeGen = () => {
@@ -206,6 +218,21 @@ export const ClientDashboard: React.FC = () => {
             <RefreshCw size={15} className={isSyncingGigs ? 'spin-icon' : ''} />
             <span>{isSyncingGigs ? 'Syncing...' : 'Live Sync'}</span>
           </button>
+          <button
+            className="btn-secondary"
+            onClick={() => openSupportModal()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1px solid rgba(6, 182, 212, 0.3)',
+              color: 'var(--accent-cyan)',
+            }}
+            title="Ask Admin Support & Clarify Doubts"
+          >
+            <LifeBuoy size={16} />
+            <span>Support & Doubts</span>
+          </button>
           <button className="btn-primary" onClick={() => setActiveTab('post-gig')}>
             <PlusCircle size={18} /> Post New Project
           </button>
@@ -223,12 +250,15 @@ export const ClientDashboard: React.FC = () => {
       >
         <div className="glass-panel" style={{ padding: '20px' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Active Posted Projects
+            Posted Projects Overview
           </span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '6px' }}>
             <strong style={{ fontSize: '1.8rem', color: 'var(--text-primary)' }}>{clientGigs.length}</strong>
-            <span style={{ fontSize: '0.85rem', color: 'var(--accent-cyan)' }}>Gigs Live</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--accent-cyan)' }}>Total Projects</span>
           </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+            {clientGigs.filter((g) => (g.status || 'open') === 'open').length} Open • {completedContracts.length} Completed
+          </span>
         </div>
 
         <div className="glass-panel" style={{ padding: '20px' }}>
@@ -239,27 +269,37 @@ export const ClientDashboard: React.FC = () => {
             <strong style={{ fontSize: '1.8rem', color: 'var(--accent-amber)' }}>{incomingBids.length}</strong>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Awaiting Decision</span>
           </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+            Candidate pitches from verified engineers
+          </span>
         </div>
 
         <div className="glass-panel" style={{ padding: '20px' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Active Escrow Contracts
+            Escrow Contracts
           </span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '6px' }}>
             <strong style={{ fontSize: '1.8rem', color: 'var(--accent-emerald)' }}>{activeContracts.length}</strong>
             <span style={{ fontSize: '0.85rem', color: 'var(--accent-emerald)' }}>In Progress</span>
           </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', marginTop: '4px', display: 'block' }}>
+            {completedContracts.length} Completed & Settled ✅
+          </span>
         </div>
 
         <div className="glass-panel" style={{ padding: '20px' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Total Escrow Allocated
+            Escrow Capital Overview
           </span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '6px' }}>
             <strong style={{ fontSize: '1.8rem', color: 'var(--text-primary)' }}>
               ${activeContracts.reduce((acc, c) => acc + (c.amount || 0), 0).toLocaleString()}
             </strong>
+            <span style={{ fontSize: '0.85rem', color: 'var(--accent-cyan)' }}>Locked</span>
           </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', marginTop: '4px', display: 'block' }}>
+            ${completedContracts.reduce((acc, c) => acc + (c.amount || 0), 0).toLocaleString()} Disbursed
+          </span>
         </div>
       </div>
 
@@ -304,6 +344,25 @@ export const ClientDashboard: React.FC = () => {
         </button>
 
         <button
+          className={`btn-ghost ${activeTab === 'trusted-partners' ? 'active' : ''}`}
+          onClick={() => setActiveTab('trusted-partners')}
+          style={{
+            borderBottom: activeTab === 'trusted-partners' ? '2px solid var(--accent-emerald)' : '2px solid transparent',
+            borderRadius: 0,
+            color: activeTab === 'trusted-partners' ? 'var(--accent-emerald)' : 'var(--text-muted)',
+            fontWeight: 600,
+            padding: '12px 18px',
+            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <Sparkles size={16} color="var(--accent-emerald)" />
+          <span>🌟 Trusted Partners ({repeatCollaborators.length})</span>
+        </button>
+
+        <button
           className={`btn-ghost ${activeTab === 'post-gig' ? 'active' : ''}`}
           onClick={() => setActiveTab('post-gig')}
           style={{
@@ -315,7 +374,7 @@ export const ClientDashboard: React.FC = () => {
             whiteSpace: 'nowrap',
           }}
         >
-          <Sparkles size={16} /> Post Project
+          <PlusCircle size={16} /> Post Project
         </button>
       </div>
 
@@ -397,6 +456,8 @@ export const ClientDashboard: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: '20px' }}>
               {incomingBids.map((bid) => {
                 const targetGig = (gigs || []).find((g) => String(g.id).trim() === String(bid.gigId || (bid as any).gig_id).trim());
+                const repeatCollab = getCollaborationBetween(currentUser?.id, bid.freelancerId, targetGig?.categoryName);
+
                 return (
                   <div
                     key={bid.id}
@@ -406,10 +467,33 @@ export const ClientDashboard: React.FC = () => {
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      border: '1px solid rgba(99, 102, 241, 0.25)',
+                      border: repeatCollab ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(99, 102, 241, 0.25)',
+                      boxShadow: repeatCollab ? '0 0 25px rgba(16, 185, 129, 0.15)' : undefined,
                     }}
                   >
                     <div>
+                      {/* Repeat Partner Banner */}
+                      {repeatCollab && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(99, 102, 241, 0.2))',
+                            border: '1px solid rgba(16, 185, 129, 0.4)',
+                            marginBottom: '12px',
+                            fontSize: '0.78rem',
+                            color: 'var(--accent-emerald)',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <Sparkles size={13} />
+                          <span>🌟 Trusted Repeat Partner • Completed {repeatCollab.completedContractsCount} previous project(s) in {repeatCollab.domain}</span>
+                        </div>
+                      )}
+
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', fontWeight: 600, textTransform: 'uppercase' }}>
                           PROJECT: {targetGig?.title ? targetGig.title.slice(0, 36) + '...' : 'Client Project'}
@@ -425,6 +509,11 @@ export const ClientDashboard: React.FC = () => {
                           <strong style={{ fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {bid.freelancerName}
                             {bid.isVerified && <CheckCircle2 size={15} color="var(--accent-emerald)" />}
+                            {repeatCollab && (
+                              <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.25)', color: 'var(--accent-emerald)' }}>
+                                Repeat Collaborator
+                              </span>
+                            )}
                           </strong>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                             {bid.freelancerTitle} • {bid.freelancerRating ?? 5.0} ★ ({bid.freelancerCompletedOrders ?? 0} completed)
@@ -489,6 +578,262 @@ export const ClientDashboard: React.FC = () => {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: Trusted Repeat Partners Network */}
+      {activeTab === 'trusted-partners' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={20} color="var(--accent-emerald)" />
+                Trusted Repeat Partners ({repeatCollaborators.length})
+              </h3>
+              <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Directly re-hire vetted engineers & designers you have previously completed projects with. Bypass public bidding and fund milestones immediately.
+              </p>
+            </div>
+          </div>
+
+          {repeatCollaborators.length === 0 ? (
+            <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center' }}>
+              <Users size={48} style={{ color: 'var(--text-muted)', marginBottom: '16px' }} />
+              <h3>No repeat partners yet</h3>
+              <p style={{ maxWidth: '440px', margin: '8px auto 20px', color: 'var(--text-secondary)' }}>
+                When you hire freelancers and complete contracts with milestone sign-offs, they will be indexed here with their technical domains for instant 1-click re-hire contracts.
+              </p>
+              <button className="btn-primary" onClick={() => setActiveTab('proposals')}>
+                <Users size={16} /> Review Current Proposals
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+              {repeatCollaborators.map((partner) => (
+                <div
+                  key={partner.partnerId}
+                  className="glass-panel"
+                  style={{
+                    padding: '24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    background: 'linear-gradient(145deg, rgba(13, 22, 38, 0.85), rgba(16, 185, 129, 0.05))',
+                    borderRadius: '16px',
+                  }}
+                >
+                  <div>
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                      <img
+                        src={partner.partnerAvatar}
+                        alt={partner.partnerName}
+                        style={{
+                          width: '52px',
+                          height: '52px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '2px solid var(--accent-emerald)',
+                        }}
+                      />
+                      <div>
+                        <strong style={{ fontSize: '1.05rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {partner.partnerName}
+                          <CheckCircle2 size={16} color="var(--accent-emerald)" />
+                        </strong>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
+                          {partner.partnerTitle || 'Verified Specialist'}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            display: 'inline-block',
+                            padding: '1px 8px',
+                            borderRadius: '4px',
+                            background: 'rgba(6, 182, 212, 0.2)',
+                            color: 'var(--accent-cyan)',
+                            fontWeight: 700,
+                            marginTop: '4px',
+                          }}
+                        >
+                          {partner.domain}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '8px',
+                        padding: '10px',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>CONTRACTS</span>
+                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{partner.completedContractsCount}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>TOTAL SETTLED</span>
+                        <strong style={{ fontSize: '0.95rem', color: 'var(--accent-emerald)' }}>${partner.totalAmount.toLocaleString()}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>RATING</span>
+                        <strong style={{ fontSize: '0.95rem', color: 'var(--accent-amber)' }}>★ {partner.averageRating ?? 5.0}</strong>
+                      </div>
+                    </div>
+
+                    {/* Past Contract Titles */}
+                    {partner.contractTitles && partner.contractTitles.length > 0 && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          PREVIOUS PROJECTS COMPLETED:
+                        </span>
+                        <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                          {partner.contractTitles.slice(0, 2).map((t, idx) => (
+                            <li key={idx} style={{ marginBottom: '2px' }}>{t}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                    <button
+                      className="btn-primary"
+                      style={{
+                        flex: 1,
+                        fontSize: '0.85rem',
+                        padding: '9px 12px',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                      onClick={() => openDirectContractModal(partner)}
+                    >
+                      <Sparkles size={15} /> Instant Re-Hire
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* All Verified Specialists for Direct Assignment */}
+          <div style={{ marginTop: '36px', paddingTop: '28px', borderTop: '1px solid var(--border-subtle)' }}>
+            <div style={{ marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={20} color="var(--accent-cyan)" />
+                Direct Work Assignment • Verified Specialist Talent
+              </h3>
+              <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Assign milestone contracts directly to any vetted engineer or designer. Escrow is safely vaulted and work starts upon mutual acceptance.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '18px' }}>
+              {mockPersonas
+                .filter((p) => p.role === 'freelancer')
+                .map((freelancer) => {
+                  const repeatCollab = getCollaborationBetween(currentUser?.id, freelancer.id);
+
+                  return (
+                    <div
+                      key={freelancer.id}
+                      className="glass-panel"
+                      style={{
+                        padding: '20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        borderRadius: '14px',
+                        border: repeatCollab ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border-subtle)',
+                        background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(99, 102, 241, 0.04))',
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                          <img
+                            src={freelancer.avatarUrl}
+                            alt={freelancer.fullName}
+                            style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-indigo)' }}
+                          />
+                          <div>
+                            <strong style={{ fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {freelancer.fullName}
+                              {freelancer.isVerified && <CheckCircle2 size={15} color="var(--accent-emerald)" />}
+                            </strong>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block' }}>
+                              {freelancer.professionalTitle}
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', fontWeight: 700 }}>
+                                ★ {freelancer.rating}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                ({freelancer.completedProjects} projects)
+                              </span>
+                              {repeatCollab && (
+                                <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.25)', color: 'var(--accent-emerald)', fontWeight: 700 }}>
+                                  Repeat Partner
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4, margin: '0 0 12px' }}>
+                          {freelancer.bio.slice(0, 110)}...
+                        </p>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '14px' }}>
+                          {(freelancer.skills || []).slice(0, 4).map((skill, sIdx) => (
+                            <span
+                              key={sIdx}
+                              style={{
+                                fontSize: '0.7rem',
+                                padding: '2px 7px',
+                                borderRadius: '4px',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid var(--border-subtle)',
+                                color: 'var(--text-muted)',
+                              }}
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        className="btn-primary"
+                        style={{
+                          width: '100%',
+                          fontSize: '0.84rem',
+                          padding: '8px 14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                        }}
+                        onClick={() => openDirectContractModal(freelancer)}
+                      >
+                        <Sparkles size={14} /> Assign Work & Direct Escrow
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -637,10 +982,11 @@ export const ClientDashboard: React.FC = () => {
 
       {/* TAB 3: My Projects & Active Contracts */}
       {activeTab === 'my-gigs' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          {/* Active Contracts Section */}
           {activeContracts.length > 0 && (
-            <>
-              <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                 <FileCheck size={18} color="var(--accent-emerald)" />
                 Active Contracts in Escrow ({activeContracts.length})
               </h3>
@@ -656,15 +1002,11 @@ export const ClientDashboard: React.FC = () => {
                           padding: '3px 8px',
                           borderRadius: 'var(--radius-full)',
                           background:
-                            c.status === 'completed'
-                              ? 'rgba(16, 185, 129, 0.2)'
-                              : c.status === 'delivered'
+                            c.status === 'delivered'
                               ? 'rgba(6, 182, 212, 0.2)'
                               : 'rgba(99, 102, 241, 0.2)',
                           color:
-                            c.status === 'completed'
-                              ? 'var(--accent-emerald)'
-                              : c.status === 'delivered'
+                            c.status === 'delivered'
                               ? 'var(--accent-cyan)'
                               : '#c7d2fe',
                         }}
@@ -703,7 +1045,83 @@ export const ClientDashboard: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
+          )}
+
+          {/* Completed & Settled Contracts Section */}
+          {completedContracts.length > 0 && (
+            <div>
+              <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--accent-emerald)' }}>
+                <CheckCircle2 size={18} color="var(--accent-emerald)" />
+                Completed & Settled Contracts ({completedContracts.length})
+              </h3>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
+                {completedContracts.map((c) => (
+                  <div key={c.id} className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: 'var(--radius-full)',
+                          background: 'rgba(16, 185, 129, 0.2)',
+                          color: 'var(--accent-emerald)',
+                          border: '1px solid rgba(16, 185, 129, 0.4)',
+                        }}
+                      >
+                        COMPLETED & SETTLED ✅
+                      </span>
+                      <strong style={{ fontSize: '1.2rem', color: 'var(--accent-emerald)' }}>
+                        ${c.amount.toLocaleString()}
+                      </strong>
+                    </div>
+
+                    <h4 style={{ fontSize: '1rem', marginBottom: '12px', lineHeight: 1.4 }}>
+                      {c.gigTitle}
+                    </h4>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                      <img src={c.freelancerAvatar} alt={c.freelancerName} className="client-avatar-sm" />
+                      <div>
+                        <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{c.freelancerName}</strong>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Contractor (Completed)</span>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.08)', marginBottom: '16px', fontSize: '0.8rem', color: 'var(--accent-emerald)' }}>
+                      100% Escrow Disbursed • All Milestones Verified
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="btn-secondary"
+                        style={{ flex: 1, padding: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.82rem' }}
+                        onClick={() => {
+                          setSelectedContractId(c.id);
+                          setActiveView('contracts');
+                        }}
+                      >
+                        <MessageSquare size={15} />
+                        <span>Workspace</span>
+                        <ArrowRight size={13} />
+                      </button>
+
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '9px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.82rem', border: '1px solid rgba(99, 102, 241, 0.4)', color: '#c7d2fe' }}
+                        onClick={() => openInvoiceModal(c.id)}
+                        title="Download / Print Official Tax Invoice & Settlement Receipt"
+                      >
+                        <FileCheck size={15} color="var(--accent-cyan)" />
+                        <span>Invoice</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Posted Gigs Header & Filters */}
@@ -748,9 +1166,14 @@ export const ClientDashboard: React.FC = () => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {filteredClientGigs.map((g) => {
+                const isGigCompleted =
+                  g.status === 'completed' ||
+                  (contracts || []).some((c) => String(c.gigId).trim() === String(g.id).trim() && c.status === 'completed');
+                const effectiveStatus = isGigCompleted ? 'completed' : (g.status || 'open');
                 const gigBids = (bids || []).filter(
                   (b) => String(b.gigId || (b as any).gig_id || '').trim() === String(g.id).trim() && (b.status || 'pending') === 'pending'
                 );
+
                 return (
                   <div
                     key={g.id}
@@ -775,21 +1198,26 @@ export const ClientDashboard: React.FC = () => {
                             padding: '2px 8px',
                             borderRadius: 'var(--radius-full)',
                             background:
-                              g.status === 'open'
+                              effectiveStatus === 'completed'
+                                ? 'rgba(16, 185, 129, 0.2)'
+                                : effectiveStatus === 'open'
                                 ? 'rgba(16, 185, 129, 0.15)'
-                                : g.status === 'awarded'
+                                : effectiveStatus === 'awarded'
                                 ? 'rgba(99, 102, 241, 0.15)'
                                 : 'rgba(148, 163, 184, 0.15)',
                             color:
-                              g.status === 'open'
+                              effectiveStatus === 'completed'
                                 ? 'var(--accent-emerald)'
-                                : g.status === 'awarded'
+                                : effectiveStatus === 'open'
+                                ? 'var(--accent-emerald)'
+                                : effectiveStatus === 'awarded'
                                 ? 'var(--accent-primary)'
                                 : 'var(--text-muted)',
+                            border: effectiveStatus === 'completed' ? '1px solid rgba(16, 185, 129, 0.4)' : 'none',
                             fontWeight: 700,
                           }}
                         >
-                          {g.status.toUpperCase()}
+                          {effectiveStatus === 'completed' ? 'COMPLETED ✅' : effectiveStatus.toUpperCase()}
                         </span>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           Posted {new Date(g.createdAt).toLocaleDateString()}

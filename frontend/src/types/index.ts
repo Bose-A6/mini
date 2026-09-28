@@ -18,6 +18,9 @@ export interface Persona {
   verificationBadge?: 'verified_pro' | 'top_rated' | 'rising_talent';
   bio: string;
   skills: string[];
+  upiId?: string;
+  phoneNumber?: string;
+  qrCodeUrl?: string;
 }
 
 export interface Category {
@@ -27,6 +30,28 @@ export interface Category {
   description: string;
   icon: string;
   gigCount: number;
+}
+
+export interface MilestonePaymentDetails {
+  upiId?: string;
+  phoneNumber?: string;
+  qrCodeUrl?: string;
+  accountName?: string;
+  paymentNote?: string;
+  updatedAt?: string;
+}
+
+export interface MilestonePaymentProof {
+  proofUrl?: string;
+  proofFiles?: string[];
+  transactionId?: string;
+  paymentMode?: 'upi' | 'gpay' | 'phonepe' | 'paytm' | 'bank_transfer' | 'other';
+  payerName?: string;
+  amountPaid: number;
+  submittedAt: string;
+  note?: string;
+  status?: 'submitted' | 'confirmed' | 'disputed';
+  confirmedAt?: string;
 }
 
 export interface Milestone {
@@ -39,6 +64,9 @@ export interface Milestone {
   deliverableFiles?: string[];
   submittedAt?: string;
   approvedAt?: string;
+  paymentDetails?: MilestonePaymentDetails;
+  paymentProof?: MilestonePaymentProof;
+  paymentStatus?: 'unpaid' | 'proof_submitted' | 'settled';
 }
 
 export interface Gig {
@@ -106,7 +134,7 @@ export interface OrderContract {
   freelancerId: string;
   freelancerName: string;
   freelancerAvatar: string;
-  status: 'in_progress' | 'delivered' | 'revision_requested' | 'completed' | 'disputed' | 'cancelled';
+  status: 'pending_acceptance' | 'in_progress' | 'delivered' | 'revision_requested' | 'completed' | 'disputed' | 'cancelled';
   amount: number;
   escrowFunded: boolean;
   deadline: string;
@@ -122,6 +150,20 @@ export interface OrderContract {
   deliverables: OrderDeliverable[];
   revisionCount: number;
   reviewId?: string;
+  categoryId?: string;
+  categoryName?: string;
+  upiId?: string;
+  phoneNumber?: string;
+  qrCodeUrl?: string;
+
+  // Mutual Acceptance & Direct Offer Fields
+  isDirectAssignment?: boolean;
+  invitationNote?: string;
+  clientAccepted?: boolean;
+  freelancerAccepted?: boolean;
+  acceptedAt?: string;
+  declinedAt?: string;
+  declineReason?: string;
 }
 
 export interface ChatMessage {
@@ -192,3 +234,96 @@ export interface ToastMessage {
   message: string;
   duration?: number;
 }
+
+export type TicketCategory =
+  | 'payment_escrow'
+  | 'contract_milestone'
+  | 'verification'
+  | 'account_security'
+  | 'technical'
+  | 'general';
+
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+
+export interface SupportTicketMessage {
+  id: string;
+  ticketId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: AccountRole | 'support_agent';
+  senderAvatar?: string;
+  content: string;
+  attachments?: string[];
+  createdAt: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userRole: AccountRole;
+  userAvatar?: string;
+  subject: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  description: string;
+  contractId?: string;
+  contractTitle?: string;
+  gigId?: string;
+  gigTitle?: string;
+  attachments?: string[];
+  messages: SupportTicketMessage[];
+  adminNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+}
+
+export interface CollaborationHistory {
+  partnerId: string;
+  partnerName: string;
+  partnerAvatar: string;
+  partnerRole: AccountRole;
+  partnerTitle?: string;
+  isVerified?: boolean;
+  domain: string;
+  completedContractsCount: number;
+  totalAmount: number;
+  lastCollaboratedAt: string;
+  contractTitles: string[];
+  ratingsGiven?: number[];
+  averageRating?: number;
+}
+
+export interface InvoiceData {
+  invoiceNumber: string;
+  contractId: string;
+  contractTitle: string;
+  categoryName?: string;
+  clientId: string;
+  clientName: string;
+  clientEmail?: string;
+  clientCompany?: string;
+  freelancerId: string;
+  freelancerName: string;
+  freelancerEmail?: string;
+  freelancerTitle?: string;
+  freelancerUpiId?: string;
+  freelancerPhone?: string;
+  amount: number;
+  platformFee: number;
+  netPayout: number;
+  status: 'paid' | 'held_in_escrow' | 'in_progress';
+  milestones: Milestone[];
+  issuedAt: string;
+  settledAt?: string;
+  transactionReference?: string;
+  paymentMode?: string;
+  auditSignature: string;
+}
+

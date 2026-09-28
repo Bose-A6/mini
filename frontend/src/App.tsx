@@ -10,6 +10,10 @@ import { ContractWorkspace } from './components/Contracts/ContractWorkspace';
 import { AdminDashboard } from './components/Admin/AdminDashboard';
 import { VerificationWizard } from './components/Verification/VerificationWizard';
 import { GigDetailModal } from './components/Marketplace/GigDetailModal';
+import { SupportModal } from './components/Support/SupportModal';
+import { FloatingSupportButton } from './components/Support/FloatingSupportButton';
+import { InvoiceModal } from './components/Contracts/InvoiceModal';
+import { DirectContractModal } from './components/Contracts/DirectContractModal';
 import { ShieldCheck, Lock, Sparkles, Layers } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -43,7 +47,19 @@ const AppContent: React.FC = () => {
       {/* 3. Global Project Detail & Proposal Modal */}
       <GigDetailModal />
 
-      {/* 4. Footer */}
+      {/* 4. Global Customer & Freelancer Support Modal */}
+      <SupportModal />
+
+      {/* 5. Floating Quick Support Button */}
+      <FloatingSupportButton />
+
+      {/* 6. Branded Tax Invoice & Payment Receipt Modal */}
+      <InvoiceModal />
+
+      {/* 7. Direct Re-Hire & Escrow Contract Modal */}
+      <DirectContractModal />
+
+      {/* 6. Footer */}
       <footer
         style={{
           borderTop: '1px solid var(--border-subtle)',

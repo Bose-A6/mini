@@ -189,12 +189,93 @@ const initialSeedVerifications = [
   }
 ];
 
+const initialSeedTickets = [
+  {
+    id: 'ticket-101',
+    ticketNumber: '#TCK-8921',
+    userId: 'client-1',
+    userName: 'Alex Rivera',
+    userEmail: 'alex.rivera@synthetix.ai',
+    userRole: 'client',
+    userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    subject: 'Escrow release confirmation inquiry for Milestone #2',
+    category: 'payment_escrow',
+    priority: 'high',
+    status: 'in_progress',
+    description: 'I uploaded the payment proof screenshot and UTR code for Milestone 2. Could the support team confirm if the escrow audit is completed so the freelancer receives payout notifications?',
+    contractId: 'contract-seed-1',
+    contractTitle: 'Autonomous Multi-Agent AI Workflow Architecture',
+    attachments: [
+      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80'
+    ],
+    messages: [
+      {
+        id: 'msg-tck-1',
+        ticketId: 'ticket-101',
+        senderId: 'client-1',
+        senderName: 'Alex Rivera',
+        senderRole: 'client',
+        senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        content: 'I uploaded the payment proof screenshot and UTR code for Milestone 2. Could the support team confirm if the escrow audit is completed so the freelancer receives payout notifications?',
+        attachments: [
+          'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80'
+        ],
+        createdAt: new Date(Date.now() - 12 * 3600000).toISOString(),
+      },
+      {
+        id: 'msg-tck-2',
+        ticketId: 'ticket-101',
+        senderId: 'admin-master-node',
+        senderName: 'Master Administrator',
+        senderRole: 'admin',
+        senderAvatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=admin-governance-shield',
+        content: 'Hello Alex! We reviewed your UTR transaction reference and screenshot proof. The payment matches the milestone valuation. The milestone status is approved and the freelancer has been notified.',
+        createdAt: new Date(Date.now() - 6 * 3600000).toISOString(),
+      }
+    ],
+    adminNotes: 'Verified UTR proof against bank treasury log. Settled smoothly.',
+    createdAt: new Date(Date.now() - 12 * 3600000).toISOString(),
+    updatedAt: new Date(Date.now() - 6 * 3600000).toISOString(),
+  },
+  {
+    id: 'ticket-102',
+    ticketNumber: '#TCK-6419',
+    userId: 'user-freelancer-2',
+    userName: 'Elena Rostova',
+    userEmail: 'elena.rostova@designcraft.io',
+    userRole: 'freelancer',
+    userAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80',
+    subject: 'Verification Badge Audit & Direct UPI Configuration Assistance',
+    category: 'verification',
+    priority: 'medium',
+    status: 'open',
+    description: 'Hello Support Team, I submitted my government ID and Figma portfolio for Verified Pro status 2 days ago. I also wanted to verify if my GPay UPI QR code is properly formatted for clients.',
+    attachments: [],
+    messages: [
+      {
+        id: 'msg-tck-3',
+        ticketId: 'ticket-102',
+        senderId: 'user-freelancer-2',
+        senderName: 'Elena Rostova',
+        senderRole: 'freelancer',
+        senderAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80',
+        content: 'Hello Support Team, I submitted my government ID and Figma portfolio for Verified Pro status 2 days ago. I also wanted to verify if my GPay UPI QR code is properly formatted for clients.',
+        createdAt: new Date(Date.now() - 4 * 3600000).toISOString(),
+      }
+    ],
+    adminNotes: 'Under review in Trust & Verification queue. Portfolio looks solid.',
+    createdAt: new Date(Date.now() - 4 * 3600000).toISOString(),
+    updatedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
+  }
+];
+
 interface StoreData {
   gigs: any[];
   bids: any[];
   contracts: any[];
   messages: any[];
   verifications: any[];
+  tickets: any[];
 }
 
 const loadStore = (): StoreData => {
@@ -209,6 +290,7 @@ const loadStore = (): StoreData => {
         contracts: [],
         messages: [],
         verifications: initialSeedVerifications,
+        tickets: initialSeedTickets,
       };
       fs.writeFileSync(STORE_PATH, JSON.stringify(initial, null, 2), 'utf-8');
       return initial;
@@ -232,31 +314,92 @@ const loadStore = (): StoreData => {
     const combinedVerifs = existingVerifs.length > 0 ? existingVerifs : initialSeedVerifications;
 
     const rawContracts = Array.isArray(parsed.contracts) ? parsed.contracts : [];
+    let didSynthesize = false;
     const normalizedContracts = rawContracts.map((c: any) => {
+      let milestones = Array.isArray(c.milestones) && c.milestones.length > 0 ? c.milestones : [];
+      
+      if (milestones.length === 0) {
+        didSynthesize = true;
+        const amt = Number(c.amount || 1000);
+        const m1 = Math.round(amt * 0.3);
+        const m2 = Math.round(amt * 0.4);
+        const m3 = amt - m1 - m2;
+        milestones = [
+          {
+            id: `m-${c.id}-0`,
+            title: 'System Architecture & Schema Design',
+            amount: m1,
+            status: c.status === 'completed' ? 'approved' : (c.deliverables && c.deliverables.length > 0 ? 'submitted' : 'in_progress'),
+            deadline: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+          },
+          {
+            id: `m-${c.id}-1`,
+            title: 'Core Functionality & API Integration',
+            amount: m2,
+            status: c.status === 'completed' ? 'approved' : 'pending',
+            deadline: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+          },
+          {
+            id: `m-${c.id}-2`,
+            title: 'Production Polish, Testing & Deployment',
+            amount: m3,
+            status: c.status === 'completed' ? 'approved' : 'pending',
+            deadline: c.deadline || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+          },
+        ];
+      }
+
       if (c.status === 'completed') {
-        const milestones = (c.milestones || []).map((m: any) => ({
+        milestones = milestones.map((m: any) => ({
           ...m,
           status: 'approved',
           approvedAt: m.approvedAt || c.completedAt || new Date().toISOString(),
+          paymentStatus: m.paymentStatus || 'settled',
         }));
-        return {
-          ...c,
-          milestones,
-        };
       }
-      return c;
+
+      return {
+        ...c,
+        milestones,
+      };
     });
 
-    return {
+    // Synchronize gigs status if their corresponding contract is completed
+    const completedContractGigIds = new Set(
+      normalizedContracts
+        .filter((c: any) => c.status === 'completed' && c.gigId)
+        .map((c: any) => String(c.gigId).trim())
+    );
+
+    combinedGigs = combinedGigs.map((g: any) => {
+      if (completedContractGigIds.has(String(g.id).trim())) {
+        return { ...g, status: 'completed' };
+      }
+      return g;
+    });
+
+    const existingTickets = Array.isArray(parsed.tickets) ? parsed.tickets : [];
+    const combinedTickets = existingTickets.length > 0 ? existingTickets : initialSeedTickets;
+
+    const loadedData: StoreData = {
       gigs: combinedGigs.length > 0 ? combinedGigs : initialSeedGigs,
       bids: Array.isArray(parsed.bids) ? parsed.bids : [],
       contracts: normalizedContracts,
       messages: Array.isArray(parsed.messages) ? parsed.messages : [],
       verifications: combinedVerifs,
+      tickets: combinedTickets,
     };
+
+    if (didSynthesize || completedContractGigIds.size > 0 || existingTickets.length === 0) {
+      try {
+        fs.writeFileSync(STORE_PATH, JSON.stringify(loadedData, null, 2), 'utf-8');
+      } catch {}
+    }
+
+    return loadedData;
   } catch (err) {
     console.error('Error reading marketplace disk store:', err);
-    return { gigs: initialSeedGigs, bids: [], contracts: [], messages: [], verifications: initialSeedVerifications };
+    return { gigs: initialSeedGigs, bids: [], contracts: [], messages: [], verifications: initialSeedVerifications, tickets: initialSeedTickets };
   }
 };
 
@@ -321,11 +464,21 @@ const contractSchema = z.object({
   freelancerName: z.string().optional(),
   freelancerAvatar: z.string().optional(),
   amount: z.number().positive(),
-  status: z.enum(['in_progress', 'delivered', 'completed', 'revision_requested', 'disputed', 'cancelled']).default('in_progress'),
+  status: z.enum(['pending_acceptance', 'in_progress', 'delivered', 'completed', 'revision_requested', 'disputed', 'cancelled']).default('in_progress'),
   escrowFunded: z.boolean().default(true),
   deadline: z.string().optional(),
   milestones: z.array(z.any()).optional(),
   deliverables: z.array(z.any()).optional(),
+  upiId: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  qrCodeUrl: z.string().optional(),
+  isDirectAssignment: z.boolean().optional(),
+  invitationNote: z.string().optional(),
+  clientAccepted: z.boolean().optional(),
+  freelancerAccepted: z.boolean().optional(),
+  acceptedAt: z.string().optional(),
+  declinedAt: z.string().optional(),
+  declineReason: z.string().optional(),
 });
 
 const messageSchema = z.object({
@@ -761,15 +914,46 @@ router.post('/contracts', async (req, res) => {
     deadline: parsed.data.deadline || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
     createdAt: new Date().toISOString(),
     revisionCount: 0,
-    milestones: parsed.data.milestones || [
-      {
-        id: `m-${Date.now()}-0`,
-        title: 'Project Deliverable & Handover',
-        amount: parsed.data.amount,
-        status: 'in_progress',
-        deadline: parsed.data.deadline || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
-      },
-    ],
+    upiId: parsed.data.upiId,
+    phoneNumber: parsed.data.phoneNumber,
+    qrCodeUrl: parsed.data.qrCodeUrl,
+    milestones: (Array.isArray(parsed.data.milestones) && parsed.data.milestones.length > 0)
+      ? parsed.data.milestones.map((m: any, idx: number) => ({
+          id: m.id || `m-${contractId}-${idx}`,
+          title: m.title || `Milestone ${idx + 1}`,
+          amount: Number(m.amount || 0),
+          status: m.status || (idx === 0 ? 'in_progress' : 'pending'),
+          deadline: m.deadline || new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
+          paymentDetails: m.paymentDetails || (parsed.data.upiId ? { upiId: parsed.data.upiId, phoneNumber: parsed.data.phoneNumber, qrCodeUrl: parsed.data.qrCodeUrl } : undefined),
+          paymentProof: m.paymentProof,
+          paymentStatus: m.paymentStatus || 'unpaid',
+        }))
+      : [
+          {
+            id: `m-${contractId}-0`,
+            title: 'System Architecture & Schema Design',
+            amount: Math.round(parsed.data.amount * 0.3),
+            status: 'in_progress',
+            deadline: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+            paymentStatus: 'unpaid',
+          },
+          {
+            id: `m-${contractId}-1`,
+            title: 'Core Functionality & API Integration',
+            amount: Math.round(parsed.data.amount * 0.4),
+            status: 'pending',
+            deadline: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+            paymentStatus: 'unpaid',
+          },
+          {
+            id: `m-${contractId}-2`,
+            title: 'Production Polish, Testing & Deployment',
+            amount: parsed.data.amount - Math.round(parsed.data.amount * 0.3) - Math.round(parsed.data.amount * 0.4),
+            status: 'pending',
+            deadline: parsed.data.deadline || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+            paymentStatus: 'unpaid',
+          },
+        ],
     deliverables: parsed.data.deliverables || [],
   };
 
@@ -824,6 +1008,14 @@ router.patch('/contracts/:id', async (req, res) => {
   }
 
   Object.assign(contract, req.body);
+
+  if (contract.status === 'completed' && contract.gigId) {
+    const targetGig = store.gigs.find((g) => String(g.id).trim() === String(contract.gigId).trim());
+    if (targetGig) {
+      targetGig.status = 'completed';
+    }
+  }
+
   saveStore(store);
 
   return res.json({ ok: true, contract });
@@ -982,11 +1174,22 @@ router.patch('/verifications/:id/decision', async (req, res) => {
     store.verifications = [];
   }
 
-  const verif = store.verifications.find((v) => String(v.id).trim() === String(req.params.id).trim());
+  const verif = store.verifications.find(
+    (v) => String(v.id).trim() === String(req.params.id).trim() || String(v.userId || '').trim() === String(req.params.id).trim()
+  );
   if (verif) {
     verif.status = status;
     verif.adminComment = adminComment || reviewNotes || '';
     verif.reviewedAt = new Date().toISOString();
+
+    if (status === 'approved' && Array.isArray(store.bids)) {
+      store.bids.forEach((b: any) => {
+        if (b.freelancerId === verif.userId || (b.freelancerEmail && b.freelancerEmail.toLowerCase() === verif.userEmail?.toLowerCase())) {
+          b.freelancerVerified = true;
+        }
+      });
+    }
+
     saveStore(store);
     return res.json({
       ok: true,
@@ -1173,6 +1376,231 @@ router.patch('/admin/contracts/:id', async (req, res) => {
 
   saveStore(store);
   return res.json({ ok: true, contract, adminMessage: adminMsg });
+});
+
+// ==========================================
+// CUSTOMER & FREELANCER SUPPORT DESK ROUTES
+// ==========================================
+
+router.get('/tickets', async (req, res) => {
+  store = loadStore();
+  const { userId, role, status, priority, category, search } = req.query;
+
+  let list = Array.isArray(store.tickets) ? [...store.tickets] : [];
+
+  if (userId) {
+    list = list.filter((t) => String(t.userId).trim() === String(userId).trim());
+  } else if (role && role !== 'admin') {
+    list = list.filter((t) => t.userRole === role);
+  }
+
+  if (status && status !== 'all') {
+    list = list.filter((t) => t.status === status);
+  }
+
+  if (priority && priority !== 'all') {
+    list = list.filter((t) => t.priority === priority);
+  }
+
+  if (category && category !== 'all') {
+    list = list.filter((t) => t.category === category);
+  }
+
+  if (search) {
+    const q = String(search).toLowerCase();
+    list = list.filter(
+      (t) =>
+        (t.ticketNumber && t.ticketNumber.toLowerCase().includes(q)) ||
+        (t.subject && t.subject.toLowerCase().includes(q)) ||
+        (t.userName && t.userName.toLowerCase().includes(q)) ||
+        (t.description && t.description.toLowerCase().includes(q))
+    );
+  }
+
+  // Sort newest first
+  list.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+
+  return res.json({ ok: true, tickets: list });
+});
+
+router.get('/tickets/:id', async (req, res) => {
+  store = loadStore();
+  const ticketId = req.params.id;
+  const ticket = (store.tickets || []).find((t) => String(t.id).trim() === String(ticketId).trim());
+
+  if (!ticket) {
+    return res.status(404).json({ ok: false, message: 'Ticket not found' });
+  }
+
+  return res.json({ ok: true, ticket });
+});
+
+router.post('/tickets', async (req, res) => {
+  store = loadStore();
+  const {
+    userId,
+    userName,
+    userEmail,
+    userRole,
+    userAvatar,
+    subject,
+    category,
+    priority,
+    description,
+    contractId,
+    contractTitle,
+    gigId,
+    gigTitle,
+    attachments,
+  } = req.body;
+
+  if (!userId || !subject || !description) {
+    return res.status(400).json({ ok: false, message: 'Missing required ticket fields' });
+  }
+
+  const ticketId = `ticket-${Date.now()}`;
+  const ticketNumber = `#TCK-${Math.floor(1000 + Math.random() * 9000)}`;
+  const now = new Date().toISOString();
+
+  const initialMsg = {
+    id: `msg-tck-${Date.now()}`,
+    ticketId,
+    senderId: userId,
+    senderName: userName || 'User',
+    senderRole: userRole || 'client',
+    senderAvatar: userAvatar || (userRole === 'client' ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150' : 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400'),
+    content: description,
+    attachments: attachments || [],
+    createdAt: now,
+  };
+
+  const autoBotMsg = {
+    id: `msg-tck-${Date.now() + 2}`,
+    ticketId,
+    senderId: 'system-support-bot',
+    senderName: 'FreelanceStack Support Bot',
+    senderRole: 'support_agent',
+    senderAvatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=support-ai-bot',
+    content: `👋 Hello ${userName || 'there'}! We have received your support inquiry regarding **${subject}** (Reference: ${ticketNumber}). A Platform Administrator has been notified and is reviewing your case. Typical response turnaround is under 15 minutes.`,
+    createdAt: new Date(Date.now() + 500).toISOString(),
+  };
+
+  const newTicket = {
+    id: ticketId,
+    ticketNumber,
+    userId,
+    userName: userName || 'User',
+    userEmail: userEmail || `${userId}@platform.dev`,
+    userRole: userRole || 'client',
+    userAvatar: userAvatar || initialMsg.senderAvatar,
+    subject,
+    category: category || 'general',
+    priority: priority || 'medium',
+    status: 'open',
+    description,
+    contractId,
+    contractTitle,
+    gigId,
+    gigTitle,
+    attachments: attachments || [],
+    messages: [initialMsg, autoBotMsg],
+    adminNotes: '',
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  if (!Array.isArray(store.tickets)) {
+    store.tickets = [];
+  }
+  store.tickets.unshift(newTicket);
+  saveStore(store);
+
+  return res.status(201).json({ ok: true, ticket: newTicket });
+});
+
+router.post('/tickets/:id/messages', async (req, res) => {
+  store = loadStore();
+  const ticketId = req.params.id;
+  const ticket = (store.tickets || []).find((t) => String(t.id).trim() === String(ticketId).trim());
+
+  if (!ticket) {
+    return res.status(404).json({ ok: false, message: 'Ticket not found' });
+  }
+
+  const { senderId, senderName, senderRole, senderAvatar, content, attachments } = req.body;
+
+  if (!content) {
+    return res.status(400).json({ ok: false, message: 'Message content is required' });
+  }
+
+  const now = new Date().toISOString();
+  const newMsg = {
+    id: `msg-tck-${Date.now()}`,
+    ticketId,
+    senderId: senderId || 'unknown',
+    senderName: senderName || 'Platform Support Representative',
+    senderRole: senderRole || 'support_agent',
+    senderAvatar: senderAvatar || (senderRole === 'admin' ? 'https://api.dicebear.com/7.x/bottts/svg?seed=admin-governance-shield' : 'https://api.dicebear.com/7.x/bottts/svg?seed=user'),
+    content,
+    attachments: attachments || [],
+    createdAt: now,
+  };
+
+  if (!Array.isArray(ticket.messages)) {
+    ticket.messages = [];
+  }
+  ticket.messages.push(newMsg);
+  ticket.updatedAt = now;
+
+  if (senderRole === 'admin' || senderRole === 'support_agent') {
+    if (ticket.status === 'open') {
+      ticket.status = 'in_progress';
+    }
+  } else if (ticket.status === 'resolved' || ticket.status === 'closed') {
+    ticket.status = 'open'; // Reopen ticket if user sends a follow-up
+  }
+
+  saveStore(store);
+  return res.json({ ok: true, message: newMsg, ticket });
+});
+
+router.patch('/tickets/:id', async (req, res) => {
+  store = loadStore();
+  const ticketId = req.params.id;
+  const ticket = (store.tickets || []).find((t) => String(t.id).trim() === String(ticketId).trim());
+
+  if (!ticket) {
+    return res.status(404).json({ ok: false, message: 'Ticket not found' });
+  }
+
+  const { status, priority, adminNotes } = req.body;
+  const now = new Date().toISOString();
+
+  if (status) {
+    ticket.status = status;
+    if (status === 'resolved') {
+      ticket.resolvedAt = now;
+    }
+  }
+  if (priority) {
+    ticket.priority = priority;
+  }
+  if (adminNotes !== undefined) {
+    ticket.adminNotes = adminNotes;
+  }
+
+  ticket.updatedAt = now;
+  saveStore(store);
+
+  return res.json({ ok: true, ticket });
+});
+
+router.delete('/tickets/:id', async (req, res) => {
+  store = loadStore();
+  const ticketId = req.params.id;
+  store.tickets = (store.tickets || []).filter((t) => String(t.id).trim() !== String(ticketId).trim());
+  saveStore(store);
+  return res.json({ ok: true, message: 'Ticket deleted' });
 });
 
 export default router;

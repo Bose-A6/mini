@@ -14,14 +14,21 @@ import {
   Radio,
   Menu,
   X,
+  Award,
+  Clock,
+  AlertCircle,
+  LifeBuoy,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const {
     currentUser,
+    verifications,
+    tickets,
     activeView,
     setActiveView,
     notifications,
+    openSupportModal,
     markNotificationRead,
     markAllNotificationsRead,
     logout,
@@ -33,6 +40,16 @@ export const Navbar: React.FC = () => {
   if (!currentUser) return null;
 
   const role = currentUser.role;
+
+  const myVerif = (verifications || []).find(
+    (v) =>
+      currentUser &&
+      (v.userId === currentUser.id ||
+        (v.userEmail && v.userEmail.toLowerCase() === currentUser.email?.toLowerCase()))
+  );
+  const isApproved = currentUser.isVerified === true || myVerif?.status === 'approved';
+  const isPending = myVerif?.status === 'pending' || myVerif?.status === 'under_review';
+  const isRejected = myVerif?.status === 'rejected';
 
   const userNotifs = notifications.filter(
     (n) => n.userId === currentUser.id || role === 'admin'
@@ -72,30 +89,52 @@ export const Navbar: React.FC = () => {
                   role === 'client'
                     ? 'rgba(6, 182, 212, 0.2)'
                     : role === 'freelancer'
-                    ? 'rgba(16, 185, 129, 0.2)'
+                    ? isApproved
+                      ? 'rgba(16, 185, 129, 0.2)'
+                      : isRejected
+                      ? 'rgba(244, 63, 94, 0.2)'
+                      : 'rgba(245, 158, 11, 0.2)'
                     : 'rgba(245, 158, 11, 0.2)',
                 color:
                   role === 'client'
                     ? 'var(--accent-cyan)'
                     : role === 'freelancer'
-                    ? 'var(--accent-emerald)'
+                    ? isApproved
+                      ? 'var(--accent-emerald)'
+                      : isRejected
+                      ? 'var(--accent-rose)'
+                      : 'var(--accent-amber)'
                     : 'var(--accent-amber)',
                 border:
                   role === 'client'
                     ? '1px solid rgba(6, 182, 212, 0.4)'
                     : role === 'freelancer'
-                    ? '1px solid rgba(16, 185, 129, 0.4)'
+                    ? isApproved
+                      ? '1px solid rgba(16, 185, 129, 0.4)'
+                      : isRejected
+                      ? '1px solid rgba(244, 63, 94, 0.4)'
+                      : '1px solid rgba(245, 158, 11, 0.4)'
                     : '1px solid rgba(245, 158, 11, 0.4)',
               }}
             >
-              {role.toUpperCase()} PORTAL
+              {role === 'freelancer'
+                ? isApproved
+                  ? 'FREELANCER • VERIFIED PRO'
+                  : isRejected
+                  ? 'FREELANCER • ACTION NEEDED'
+                  : isPending
+                  ? 'FREELANCER • PENDING AUDIT'
+                  : 'FREELANCER • UNVERIFIED'
+                : `${role.toUpperCase()} PORTAL`}
             </span>
           </div>
           <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1 }}>
             {role === 'client'
               ? 'Client Project & Escrow Management'
               : role === 'freelancer'
-              ? 'Freelancer Engineering Suite'
+              ? isApproved
+                ? 'Verified Engineering Suite'
+                : 'Trust & Verification Pending'
               : 'Master Platform Governance'}
           </p>
         </div>
@@ -138,7 +177,7 @@ export const Navbar: React.FC = () => {
               onClick={() => navigateTo('freelancer')}
             >
               <UserCheck size={16} />
-              <span>Freelancer Workspace</span>
+              <span>{isApproved ? 'Freelancer Workspace' : 'Portal Status'}</span>
             </button>
             <button
               className={`nav-item ${activeView === 'gigs' ? 'active' : ''}`}
@@ -158,8 +197,27 @@ export const Navbar: React.FC = () => {
               className={`nav-item ${activeView === 'verification' ? 'active' : ''}`}
               onClick={() => navigateTo('verification')}
             >
-              <Sparkles size={16} />
-              <span>Get Verified</span>
+              {isApproved ? (
+                <>
+                  <Award size={16} color="var(--accent-emerald)" />
+                  <span>Verified Pass</span>
+                </>
+              ) : isPending ? (
+                <>
+                  <Clock size={16} color="var(--accent-amber)" />
+                  <span>Pending Review</span>
+                </>
+              ) : isRejected ? (
+                <>
+                  <AlertCircle size={16} color="var(--accent-rose)" />
+                  <span>Action Needed</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} />
+                  <span>Get Verified</span>
+                </>
+              )}
             </button>
           </>
         )}
@@ -194,17 +252,6 @@ export const Navbar: React.FC = () => {
 
       {/* Nav Actions (Right side) */}
       <div className="nav-actions">
-        {/* Client Post Project Quick Action */}
-        {role === 'client' && (
-          <button
-            className="btn-primary"
-            style={{ padding: '7px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-            onClick={() => navigateTo('client')}
-          >
-            <Briefcase size={14} />
-            <span>+ Post Project</span>
-          </button>
-        )}
         {/* Supabase Status */}
         <div
           style={{
@@ -224,6 +271,35 @@ export const Navbar: React.FC = () => {
           <Radio size={12} className="pulse-icon" />
           <span>Supabase Live</span>
         </div>
+
+        {/* Support Helpdesk Button */}
+        <button
+          className="nav-btn-icon"
+          onClick={() => {
+            if (role === 'admin') {
+              navigateTo('admin');
+            } else {
+              openSupportModal();
+            }
+          }}
+          title={role === 'admin' ? 'Open Admin Helpdesk' : 'Need Help? Customer & Freelancer Support'}
+          style={{ position: 'relative' }}
+        >
+          <LifeBuoy size={18} />
+          {(tickets || []).some((t) => t.userId === currentUser.id && t.status === 'open') && (
+            <span
+              style={{
+                position: 'absolute',
+                top: 3,
+                right: 3,
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: 'var(--accent-amber)',
+              }}
+            />
+          )}
+        </button>
 
         {/* Real-Time Notifications */}
         <div style={{ position: 'relative' }}>
