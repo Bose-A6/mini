@@ -585,7 +585,10 @@ const verificationSchema = z.object({
   pitchStatement: z.string().default(''),
   adminComment: z.string().optional(),
   reviewNotes: z.string().optional(),
-});
+  submittedAt: z.string().optional(),
+  reviewedBy: z.string().optional(),
+  reviewedAt: z.string().optional(),
+}).passthrough();
 
 const slugify = (value: string) => `${value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Math.random().toString(36).slice(2, 8)}`;
 

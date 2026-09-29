@@ -29,12 +29,22 @@ const allowedOrigins = Array.from(new Set([
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-      return;
+    // Allow requests with no origin (like mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    // If wildcard or vercel deployment or localhost or listed origin
+    if (
+      allowedOrigins.includes('*') ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1')
+    ) {
+      return callback(null, true);
     }
 
-    callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    // Default permissive callback for all client frontend origins
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
