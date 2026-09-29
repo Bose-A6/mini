@@ -32,6 +32,9 @@ export const Navbar: React.FC = () => {
     markNotificationRead,
     markAllNotificationsRead,
     logout,
+    backendConnected,
+    apiUrl,
+    setIsApiModalOpen,
   } = useApp();
 
   const [showNotifs, setShowNotifs] = useState(false);
@@ -252,6 +255,28 @@ export const Navbar: React.FC = () => {
 
       {/* Nav Actions (Right side) */}
       <div className="nav-actions">
+        {/* Cloud Backend Live Status */}
+        <button
+          onClick={() => setIsApiModalOpen(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '0.75rem',
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-full)',
+            background: backendConnected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.15)',
+            border: `1px solid ${backendConnected ? 'rgba(16, 185, 129, 0.25)' : 'rgba(244, 63, 94, 0.35)'}`,
+            color: backendConnected ? 'var(--accent-emerald)' : '#f43f5e',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+          title={`Backend API: ${apiUrl} (${backendConnected ? 'Connected & Active' : 'Offline / Click to configure'})`}
+        >
+          <Radio size={12} className={backendConnected ? 'pulse-icon' : ''} />
+          <span>{backendConnected ? 'Cloud Sync' : 'API Offline'}</span>
+        </button>
+
         {/* Supabase Status */}
         <div
           style={{

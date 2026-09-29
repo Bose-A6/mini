@@ -14,6 +14,7 @@ import { SupportModal } from './components/Support/SupportModal';
 import { FloatingSupportButton } from './components/Support/FloatingSupportButton';
 import { InvoiceModal } from './components/Contracts/InvoiceModal';
 import { DirectContractModal } from './components/Contracts/DirectContractModal';
+import { ApiConnectionModal } from './components/Common/ApiConnectionModal';
 import { ShieldCheck, Lock, Sparkles, Layers } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -58,6 +59,9 @@ const AppContent: React.FC = () => {
 
       {/* 7. Direct Re-Hire & Escrow Contract Modal */}
       <DirectContractModal />
+
+      {/* 8. Live Backend API Connection & Diagnostics Modal */}
+      <ApiConnectionModal />
 
       {/* 6. Footer */}
       <footer
