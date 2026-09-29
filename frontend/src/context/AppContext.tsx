@@ -181,6 +181,10 @@ export const getApiUrl = (): string => {
     if (custom && custom.trim().length > 0) {
       return custom.trim().replace(/\/+$/, '');
     }
+    // In production on Vercel or any live domain, use same origin
+    if (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+      return window.location.origin;
+    }
   }
   return 'http://localhost:4000';
 };
