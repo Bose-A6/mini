@@ -45,6 +45,21 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+app.get('/', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'marketplace-backend',
+    status: 'online',
+    health: '/health',
+    endpoints: {
+      auth: '/api/auth',
+      profile: '/api/profile',
+      verifications: '/api/verifications',
+      marketplace: '/api/marketplace',
+    },
+  });
+});
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'marketplace-backend', timestamp: new Date().toISOString() });
 });
