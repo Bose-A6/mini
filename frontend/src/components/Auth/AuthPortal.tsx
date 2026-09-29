@@ -21,7 +21,7 @@ import {
 import type { AccountRole } from '../../types';
 
 export const AuthPortal: React.FC = () => {
-  const { login, signup, adminLogin, setActiveView } = useApp();
+  const { login, signup, adminLogin, setActiveView, backendConnected, apiUrl, setIsApiModalOpen } = useApp();
 
   // Selected role tab for login/signup
   const [selectedRole, setSelectedRole] = useState<AccountRole>('client');
@@ -263,23 +263,49 @@ export const AuthPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* Live Supabase Connection Badge */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '0.8rem',
-            padding: '6px 14px',
-            borderRadius: 'var(--radius-full)',
-            background: 'rgba(16, 185, 129, 0.12)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            color: 'var(--accent-emerald)',
-            fontWeight: 600,
-          }}
-        >
-          <Radio size={14} className="pulse-icon" />
-          <span>🟢 Supabase Connected & Real-Time Active</span>
+        {/* Live Status Badges */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Cloud Backend Sync Status */}
+          <button
+            type="button"
+            onClick={() => setIsApiModalOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '0.8rem',
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-full)',
+              background: backendConnected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.15)',
+              border: `1px solid ${backendConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.35)'}`,
+              color: backendConnected ? 'var(--accent-emerald)' : '#f43f5e',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+            title={`Backend API: ${apiUrl} (${backendConnected ? 'Connected & Active' : 'Offline / Click to configure'})`}
+          >
+            <Radio size={14} className={backendConnected ? 'pulse-icon' : ''} />
+            <span>{backendConnected ? '🟢 Cloud Sync Active' : '🔴 API Offline (Click to Connect)'}</span>
+          </button>
+
+          {/* Live Supabase Connection Badge */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '0.8rem',
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-full)',
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: 'var(--accent-emerald)',
+              fontWeight: 600,
+            }}
+          >
+            <Radio size={14} className="pulse-icon" />
+            <span>⚡ Supabase Live</span>
+          </div>
         </div>
       </div>
 

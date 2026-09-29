@@ -25,6 +25,7 @@ const AppContent: React.FC = () => {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <AuthPortal />
+        <ApiConnectionModal />
         <ToastContainer />
       </div>
     );
