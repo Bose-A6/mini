@@ -323,13 +323,13 @@ export const AdminDashboard: React.FC = () => {
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <span className="persona-badge badge-admin">Platform Governance</span>
+            <span className="persona-badge badge-admin">Platform Administration</span>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              {currentUser ? `Master Console: ${currentUser.fullName}` : 'Admin Node Access'}
+              {currentUser ? `Admin: ${currentUser.fullName}` : 'Admin Access'}
             </span>
           </div>
-          <h2>Master Platform Governance & Audit Hub</h2>
-          <p>Real-time verification queue, project scope oversight, escrow treasury mediation, and user registry.</p>
+          <h2>Platform Administration & Safety</h2>
+          <p>Review identity verifications, manage active projects, monitor escrow transactions, and support users.</p>
         </div>
 
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -340,7 +340,7 @@ export const AdminDashboard: React.FC = () => {
             title="Fetch Fresh Records from Backend"
           >
             <RefreshCw size={15} className={isSyncingGigs ? 'spin-icon' : ''} />
-            <span>{isSyncingGigs ? 'Syncing Backend...' : 'Live Refresh'}</span>
+            <span>{isSyncingGigs ? 'Syncing...' : 'Refresh'}</span>
           </button>
 
           <span
@@ -357,7 +357,7 @@ export const AdminDashboard: React.FC = () => {
               fontWeight: 600,
             }}
           >
-            <Activity size={14} /> Real-Time Node Active
+            <Activity size={14} /> System Operational
           </span>
         </div>
       </div>
@@ -407,7 +407,7 @@ export const AdminDashboard: React.FC = () => {
             <strong style={{ fontSize: '1.8rem', color: 'var(--accent-amber)' }}>
               {pendingVerifs.length}
             </strong>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Awaiting Audit</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Awaiting Review</span>
           </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)' }}>
             {approvedVerifs.length} Verified Pros
@@ -479,7 +479,7 @@ export const AdminDashboard: React.FC = () => {
             whiteSpace: 'nowrap',
           }}
         >
-          <ShieldCheck size={16} /> Freelancer Verification Queue ({pendingVerifs.length})
+          <ShieldCheck size={16} /> Verification Queue ({pendingVerifs.length})
         </button>
 
         <button
@@ -509,7 +509,7 @@ export const AdminDashboard: React.FC = () => {
             whiteSpace: 'nowrap',
           }}
         >
-          <Users size={16} /> Proposals & Escrow Contracts ({contracts.length})
+          <Users size={16} /> Proposals & Contracts ({contracts.length})
         </button>
 
         <button
@@ -524,7 +524,7 @@ export const AdminDashboard: React.FC = () => {
             whiteSpace: 'nowrap',
           }}
         >
-          <DollarSign size={16} /> Escrow Treasury Analytics
+          <DollarSign size={16} /> Treasury & Escrow Analytics
         </button>
 
         <button
@@ -539,7 +539,7 @@ export const AdminDashboard: React.FC = () => {
             whiteSpace: 'nowrap',
           }}
         >
-          <Users size={16} /> User Governance Registry ({platformUsers.length})
+          <Users size={16} /> User Management ({platformUsers.length})
         </button>
 
         <button

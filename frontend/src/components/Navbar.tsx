@@ -84,17 +84,17 @@ export const Navbar: React.FC = () => {
                 fontSize: '0.68rem',
                 padding: '2px 8px',
                 borderRadius: 'var(--radius-full)',
-                fontWeight: 800,
+                fontWeight: 700,
                 background:
                   role === 'client'
-                    ? 'rgba(6, 182, 212, 0.2)'
+                    ? 'rgba(14, 165, 233, 0.15)'
                     : role === 'freelancer'
                     ? isApproved
-                      ? 'rgba(16, 185, 129, 0.2)'
+                      ? 'rgba(16, 185, 129, 0.15)'
                       : isRejected
-                      ? 'rgba(244, 63, 94, 0.2)'
-                      : 'rgba(245, 158, 11, 0.2)'
-                    : 'rgba(245, 158, 11, 0.2)',
+                      ? 'rgba(244, 63, 94, 0.15)'
+                      : 'rgba(245, 158, 11, 0.15)'
+                    : 'rgba(245, 158, 11, 0.15)',
                 color:
                   role === 'client'
                     ? 'var(--accent-cyan)'
@@ -107,35 +107,35 @@ export const Navbar: React.FC = () => {
                     : 'var(--accent-amber)',
                 border:
                   role === 'client'
-                    ? '1px solid rgba(6, 182, 212, 0.4)'
+                    ? '1px solid rgba(14, 165, 233, 0.3)'
                     : role === 'freelancer'
                     ? isApproved
-                      ? '1px solid rgba(16, 185, 129, 0.4)'
+                      ? '1px solid rgba(16, 185, 129, 0.3)'
                       : isRejected
-                      ? '1px solid rgba(244, 63, 94, 0.4)'
-                      : '1px solid rgba(245, 158, 11, 0.4)'
-                    : '1px solid rgba(245, 158, 11, 0.4)',
+                      ? '1px solid rgba(244, 63, 94, 0.3)'
+                      : '1px solid rgba(245, 158, 11, 0.3)'
+                    : '1px solid rgba(245, 158, 11, 0.3)',
               }}
             >
               {role === 'freelancer'
                 ? isApproved
                   ? 'FREELANCER • VERIFIED PRO'
                   : isRejected
-                  ? 'FREELANCER • ACTION NEEDED'
+                  ? 'FREELANCER • ACTION REQUIRED'
                   : isPending
-                  ? 'FREELANCER • PENDING AUDIT'
+                  ? 'FREELANCER • UNDER REVIEW'
                   : 'FREELANCER • UNVERIFIED'
-                : `${role.toUpperCase()} PORTAL`}
+                : `${role.toUpperCase()} WORKSPACE`}
             </span>
           </div>
           <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1 }}>
             {role === 'client'
-              ? 'Client Project & Escrow Management'
+              ? 'Client Projects & Escrow Management'
               : role === 'freelancer'
               ? isApproved
-                ? 'Verified Engineering Suite'
-                : 'Trust & Verification Pending'
-              : 'Master Platform Governance'}
+                ? 'Verified Freelancer Studio'
+                : 'Trust & Profile Verification'
+              : 'Platform Administration & Safety'}
           </p>
         </div>
       </div>
@@ -150,7 +150,7 @@ export const Navbar: React.FC = () => {
               onClick={() => navigateTo('client')}
             >
               <Briefcase size={16} />
-              <span>Client Hub & Postings</span>
+              <span>Projects & Hiring</span>
             </button>
             <button
               className={`nav-item ${activeView === 'gigs' ? 'active' : ''}`}
@@ -164,7 +164,7 @@ export const Navbar: React.FC = () => {
               onClick={() => navigateTo('contracts')}
             >
               <FileCheck2 size={16} />
-              <span>My Escrow Contracts</span>
+              <span>Escrow Contracts</span>
             </button>
           </>
         )}
@@ -177,14 +177,14 @@ export const Navbar: React.FC = () => {
               onClick={() => navigateTo('freelancer')}
             >
               <UserCheck size={16} />
-              <span>{isApproved ? 'Freelancer Workspace' : 'Portal Status'}</span>
+              <span>{isApproved ? 'Freelancer Studio' : 'Portal Status'}</span>
             </button>
             <button
               className={`nav-item ${activeView === 'gigs' ? 'active' : ''}`}
               onClick={() => navigateTo('gigs')}
             >
               <Search size={16} />
-              <span>Explore Client Projects</span>
+              <span>Explore Projects</span>
             </button>
             <button
               className={`nav-item ${activeView === 'contracts' ? 'active' : ''}`}
@@ -200,17 +200,17 @@ export const Navbar: React.FC = () => {
               {isApproved ? (
                 <>
                   <Award size={16} color="var(--accent-emerald)" />
-                  <span>Verified Pass</span>
+                  <span>Verified Pro</span>
                 </>
               ) : isPending ? (
                 <>
                   <Clock size={16} color="var(--accent-amber)" />
-                  <span>Pending Review</span>
+                  <span>Under Review</span>
                 </>
               ) : isRejected ? (
                 <>
                   <AlertCircle size={16} color="var(--accent-rose)" />
-                  <span>Action Needed</span>
+                  <span>Action Required</span>
                 </>
               ) : (
                 <>
@@ -230,21 +230,21 @@ export const Navbar: React.FC = () => {
               onClick={() => navigateTo('admin')}
             >
               <ShieldCheck size={16} />
-              <span>Admin Governance</span>
+              <span>Platform Safety</span>
             </button>
             <button
               className={`nav-item ${activeView === 'contracts' ? 'active' : ''}`}
               onClick={() => navigateTo('contracts')}
             >
               <FileCheck2 size={16} />
-              <span>All Platform Escrows</span>
+              <span>Escrow Contracts</span>
             </button>
             <button
               className={`nav-item ${activeView === 'gigs' ? 'active' : ''}`}
               onClick={() => navigateTo('gigs')}
             >
               <Search size={16} />
-              <span>All Gigs Overview</span>
+              <span>All Projects</span>
             </button>
           </>
         )}

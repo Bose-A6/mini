@@ -52,6 +52,7 @@ export const ClientDashboard: React.FC = () => {
   // New Gig Form State
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState(categories[0]?.id || 'cat-ai');
+  const [customCategoryName, setCustomCategoryName] = useState('');
   const [budgetMin, setBudgetMin] = useState(1500);
   const [budgetMax, setBudgetMax] = useState(3000);
   const [deadline, setDeadline] = useState('2026-11-15');
@@ -110,20 +111,92 @@ export const ClientDashboard: React.FC = () => {
     return getRepeatCollaboratorsForClient(currentUser.id);
   }, [getRepeatCollaboratorsForClient, currentUser]);
 
-  // AI Scope Generator (assists real clients to write structured briefs)
+  // Category-aware brief assistant (assists real clients to write structured briefs across Accounting, Finance, Legal, Marketing, Tech, or Custom/Other fields)
   const handleAiScopeGen = () => {
     setIsGeneratingAi(true);
     setTimeout(() => {
-      setTitle('Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector');
-      setDescription(
-        `We are seeking a seasoned Principal Full-Stack & AI Engineer to design and deploy an end-to-end Enterprise RAG platform.\n\nKey Deliverables:\n1. Supabase pgvector embedding pipelines with hybrid sparse/dense search.\n2. Next.js 15 App Router interface with streaming token response & optimistic state caching.\n3. Row Level Security (RLS) policies ensuring strict enterprise data tenant isolation.\n4. Comprehensive Jest integration tests and GitHub Actions CI/CD deployment.`
-      );
-      setBudgetMin(3500);
-      setBudgetMax(5000);
-      setTags('Next.js 15, TypeScript, Supabase, pgvector, LangChain, TailwindCSS');
+      const cat = categories.find((c) => c.id === categoryId);
+      const slug = cat?.slug || categoryId;
+
+      if (categoryId === 'cat-other' || slug === 'cat-other' || slug === 'other') {
+        const customDomain = customCategoryName.trim() || 'Custom Specialized Project';
+        setTitle(`${customDomain}: Strategic Scope & Comprehensive Milestone Execution`);
+        setDescription(
+          `We are looking for an experienced specialist in ${customDomain} to lead and deliver our project requirements.\n\nKey Deliverables:\n1. Initial requirements audit, alignment, and discovery blueprint.\n2. Core execution phase with iterative milestones and milestone review checkpoints.\n3. Final delivery package, QA verification, and comprehensive handover documentation.`
+        );
+        setBudgetMin(2000);
+        setBudgetMax(3500);
+        setTags(`${customDomain}, Professional Services, Milestone Escrow, Quality Assurance`);
+      } else if (slug === 'accounting-bookkeeping' || slug === 'cat-accounting') {
+        setTitle('Full Multi-Entity General Ledger Reconciliation & Year-End Tax Preparation');
+        setDescription(
+          `We are seeking a licensed CPA or senior bookkeeper to perform a comprehensive financial audit and chart-of-accounts cleanup for our operating entities in QuickBooks Online.\n\nKey Deliverables:\n1. Chart of Accounts audit, expense re-classification, and cleanup.\n2. Multi-entity bank and Stripe merchant feeds reconciliation.\n3. Preparation of GAAP-compliant balance sheets and P&L statements.\n4. Organized tax depreciation schedules for annual filing.`
+        );
+        setBudgetMin(2400);
+        setBudgetMax(3800);
+        setTags('QuickBooks Online, GAAP Accounting, Ledger Reconciliation, Tax Strategy, Excel');
+      } else if (slug === 'finance-cfo' || slug === 'cat-finance') {
+        setTitle('5-Year SaaS Dynamic Financial Model & Series A Investor Pitch Deck Financials');
+        setDescription(
+          `Seeking an experienced FP&A Specialist or Fractional CFO to build an investor-grade 3-statement dynamic financial model for institutional venture capital presentations.\n\nKey Deliverables:\n1. Historical cohort churn/retention analysis and unit economics (CAC, LTV, Magic Number).\n2. 3-statement integrated dynamic forecasting model with multiple sensitivity scenarios.\n3. Cap table dilution waterfall modeling and automated valuation charts.`
+        );
+        setBudgetMin(3200);
+        setBudgetMax(5000);
+        setTags('Financial Modeling, FP&A, DCF Valuation, Cap Table, SaaS Metrics, Investor Deck');
+      } else if (slug === 'legal-compliance' || slug === 'cat-legal') {
+        setTitle('Draft Enterprise Master Services Agreement (MSA), SOW Suite & GDPR Privacy Package');
+        setDescription(
+          `Seeking a corporate technology attorney to draft a robust suite of commercial contracts for our enterprise software offerings.\n\nKey Deliverables:\n1. Standard Enterprise Master Services Agreement (MSA) with limitation of liability.\n2. Modular Statement of Work (SOW) template and Service Level Agreement (SLA).\n3. GDPR and CCPA Data Processing Addendum (DPA) with standard contractual clauses.`
+        );
+        setBudgetMin(2000);
+        setBudgetMax(3500);
+        setTags('Commercial Law, Contract Drafting, Enterprise MSA, SLA, GDPR, Compliance');
+      } else if (slug === 'growth-marketing' || slug === 'cat-marketing') {
+        setTitle('B2B SaaS Growth Marketing Strategy, Paid LinkedIn Ads & SEO Keyword Pipeline');
+        setDescription(
+          `We need a senior B2B growth marketing strategist to design and implement a scalable customer acquisition pipeline.\n\nKey Deliverables:\n1. Ideal Customer Profile (ICP) definition and multi-channel acquisition roadmap.\n2. High-converting LinkedIn and Google Search campaign structure with landing page copy.\n3. GA4 custom event tracking, conversion optimization, and programmatic SEO plan.`
+        );
+        setBudgetMin(2800);
+        setBudgetMax(4200);
+        setTags('Growth Marketing, SEO, Paid Ads, LinkedIn Ads, B2B Funnels, Google Analytics 4');
+      } else if (slug === 'writing-content' || slug === 'cat-writing') {
+        setTitle('Technical Whitepaper & Developer API Documentation Suite');
+        setDescription(
+          `Seeking a seasoned Technical Writer to produce an authoritative architectural whitepaper and developer documentation suite.\n\nKey Deliverables:\n1. 15-page comprehensive architectural whitepaper with clear system diagrams.\n2. OpenAPI developer documentation guide and code snippet tutorials.\n3. Thought-leadership technical blog posts explaining key infrastructure innovations.`
+        );
+        setBudgetMin(1800);
+        setBudgetMax(3000);
+        setTags('Technical Writing, Whitepapers, API Docs, Markdown, OpenAPI, Developer Relations');
+      } else if (slug === 'operations-management' || slug === 'cat-bizops') {
+        setTitle('HubSpot CRM Revenue Operations Architecture & Automated Sales Lead Pipeline');
+        setDescription(
+          `We need a RevOps consultant to restructure our HubSpot CRM, configure lead scoring rules, automate multi-channel deal assignment, and build revenue tracking dashboards.\n\nKey Deliverables:\n1. HubSpot CRM custom property architecture and sales lifecycle stages cleanup.\n2. Automated lead scoring, Slack notification webhooks, and Stripe billing sync.\n3. Executive ARR/MRR dashboard reports and team standard operating procedure (SOP).`
+        );
+        setBudgetMin(2200);
+        setBudgetMax(3600);
+        setTags('HubSpot CRM, RevOps, Automation, Zapier, Notion, KPI Dashboards');
+      } else if (slug === 'ui-ux' || slug === 'cat-uiux') {
+        setTitle('Neo-Fintech Design System & Figma Token Suite for Enterprise Dashboard');
+        setDescription(
+          `Create a complete, comprehensive Figma design system featuring glassmorphism micro-interactions, dark & light themes, accessibility compliance (WCAG AAA), 60+ modular components, and ready-to-export Tailwind CSS token mappings.`
+        );
+        setBudgetMin(2200);
+        setBudgetMax(3400);
+        setTags('Figma, Design Systems, WCAG, TailwindCSS, Micro-Interactions');
+      } else {
+        setTitle('Architect Autonomous Multi-Modal RAG Platform with Next.js 15 & Supabase Vector');
+        setDescription(
+          `We are seeking a seasoned Principal Full-Stack & AI Engineer to design and deploy an end-to-end Enterprise RAG platform.\n\nKey Deliverables:\n1. Supabase pgvector embedding pipelines with hybrid sparse/dense search.\n2. Next.js 15 App Router interface with streaming token response & optimistic state caching.\n3. Row Level Security (RLS) policies ensuring strict enterprise data tenant isolation.\n4. Comprehensive Jest integration tests and GitHub Actions CI/CD deployment.`
+        );
+        setBudgetMin(3500);
+        setBudgetMax(5000);
+        setTags('Next.js 15, TypeScript, Supabase, pgvector, LangChain, TailwindCSS');
+      }
+
       setIsGeneratingAi(false);
-      addToast('info', 'AI Scope Generated ✨', 'Project brief template populated for your adjustments.');
-    }, 400);
+      const categoryLabel = categoryId === 'cat-other' ? (customCategoryName || 'Custom Work') : (cat?.name || 'Project');
+      addToast('info', 'Brief Template Loaded ✨', `${categoryLabel} brief draft populated for your adjustments.`);
+    }, 300);
   };
 
   const handlePostGig = (e: React.FormEvent) => {
@@ -133,15 +206,57 @@ export const ClientDashboard: React.FC = () => {
       return;
     }
 
-    const cat = categories.find((c) => c.id === categoryId) || categories[0];
+    let effectiveCategoryName = '';
+    let effectiveCategoryId = '';
+
+    if (categoryId === 'cat-other') {
+      if (!customCategoryName.trim()) {
+        addToast('warning', 'Missing Industry Sector', 'Please enter your custom industry or work field.');
+        return;
+      }
+      effectiveCategoryName = customCategoryName.trim();
+      effectiveCategoryId = customCategoryName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    } else {
+      const cat = categories.find((c) => c.id === categoryId) || categories[0];
+      effectiveCategoryName = cat.name;
+      effectiveCategoryId = cat.slug || cat.id;
+    }
+
     const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean);
+    const slug = effectiveCategoryId;
+
+    let defaultMilestoneTitles = [
+      'Initial Discovery & Requirements Assessment',
+      'Core Milestone Execution & Draft Deliverable',
+      'Final Polish, Review & Handover Package',
+    ];
+
+    if (slug.includes('accounting') || slug.includes('finance')) {
+      defaultMilestoneTitles = [
+        'Initial Ledger Audit & Data Ingestion',
+        'Core Financial Reconciliation & Model Build',
+        'Final GAAP Statements & Executive Deliverables',
+      ];
+    } else if (slug.includes('legal')) {
+      defaultMilestoneTitles = [
+        'Initial Legal Audit & Contract Framework',
+        'Drafting Master Agreements & SOW Suite',
+        'Compliance Review, Revisions & Final Sign-Off',
+      ];
+    } else if (slug.includes('marketing')) {
+      defaultMilestoneTitles = [
+        'Market Research & Acquisition Strategy',
+        'Campaign Launch & Creative Asset Build',
+        'Conversion Optimization & Analytics Handover',
+      ];
+    }
 
     createGig({
       title,
       slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       description,
-      categoryId: cat.slug || cat.id,
-      categoryName: cat.name,
+      categoryId: effectiveCategoryId,
+      categoryName: effectiveCategoryName,
       budgetMin,
       budgetMax,
       deadline,
@@ -149,14 +264,15 @@ export const ClientDashboard: React.FC = () => {
       tags: tagList,
       isFeatured: false,
       suggestedMilestones: [
-        { title: 'System Architecture & Schema Design', amount: Math.round(budgetMin * 0.3) },
-        { title: 'Core Functionality & API Integration', amount: Math.round(budgetMin * 0.4) },
-        { title: 'Production Polish, Testing & Deployment', amount: Math.round(budgetMin * 0.3) },
+        { title: defaultMilestoneTitles[0], amount: Math.round(budgetMin * 0.3) },
+        { title: defaultMilestoneTitles[1], amount: Math.round(budgetMin * 0.4) },
+        { title: defaultMilestoneTitles[2], amount: Math.round(budgetMin * 0.3) },
       ],
     });
 
     setTitle('');
     setDescription('');
+    setCustomCategoryName('');
     setActiveTab('my-gigs');
   };
 
@@ -188,13 +304,13 @@ export const ClientDashboard: React.FC = () => {
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <span className="persona-badge badge-client">Client Command Center</span>
+            <span className="persona-badge badge-client">Client Workspace</span>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              {currentUser ? `Signed in: ${currentUser.fullName}` : 'Client Workspace'}
+              {currentUser ? `Signed in as ${currentUser.fullName}` : 'Client Workspace'}
             </span>
           </div>
-          <h2>Enterprise Hiring & Escrow Hub</h2>
-          <p>Publish project scopes, review incoming freelancer proposals, and fund milestone contracts.</p>
+          <h2>Hiring & Project Management</h2>
+          <p>Manage your open projects, review candidate proposals, and oversee escrow milestones.</p>
         </div>
 
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -216,7 +332,7 @@ export const ClientDashboard: React.FC = () => {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <RefreshCw size={15} className={isSyncingGigs ? 'spin-icon' : ''} />
-            <span>{isSyncingGigs ? 'Syncing...' : 'Live Sync'}</span>
+            <span>{isSyncingGigs ? 'Syncing...' : 'Refresh'}</span>
           </button>
           <button
             className="btn-secondary"
@@ -225,13 +341,13 @@ export const ClientDashboard: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              border: '1px solid rgba(6, 182, 212, 0.3)',
+              border: '1px solid rgba(14, 165, 233, 0.3)',
               color: 'var(--accent-cyan)',
             }}
             title="Ask Admin Support & Clarify Doubts"
           >
             <LifeBuoy size={16} />
-            <span>Support & Doubts</span>
+            <span>Support & Help</span>
           </button>
           <button className="btn-primary" onClick={() => setActiveTab('post-gig')}>
             <PlusCircle size={18} /> Post New Project
@@ -340,7 +456,7 @@ export const ClientDashboard: React.FC = () => {
             whiteSpace: 'nowrap',
           }}
         >
-          <Users size={16} /> Proposals War Room ({incomingBids.length})
+          <Users size={16} /> Candidate Proposals ({incomingBids.length})
         </button>
 
         <button
@@ -378,7 +494,7 @@ export const ClientDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* TAB 1: Proposals War Room */}
+      {/* TAB 1: Candidate Proposals */}
       {activeTab === 'proposals' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
@@ -876,10 +992,10 @@ export const ClientDashboard: React.FC = () => {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: categoryId === 'cat-other' ? '1fr' : '1fr 1fr', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                    INDUSTRY SECTOR
+                    INDUSTRY SECTOR / DOMAIN *
                   </label>
                   <select
                     value={categoryId}
@@ -891,8 +1007,32 @@ export const ClientDashboard: React.FC = () => {
                         {c.name}
                       </option>
                     ))}
+                    {!categories.some((c) => c.id === 'cat-other') && (
+                      <option value="cat-other">✨ Other / Custom Industry...</option>
+                    )}
                   </select>
                 </div>
+
+                {categoryId === 'cat-other' && (
+                  <div style={{ animation: 'fadeIn 0.25s ease' }}>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--accent-amber)', marginBottom: '6px', fontWeight: 600 }}>
+                      ENTER YOUR CUSTOM INDUSTRY / WORK FIELD *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Architectural 3D Rendering, Video Production, Translation, Medical Writing..."
+                      value={customCategoryName}
+                      onChange={(e) => setCustomCategoryName(e.target.value)}
+                      style={{
+                        width: '100%',
+                        borderColor: 'rgba(245, 158, 11, 0.5)',
+                        background: 'rgba(245, 158, 11, 0.05)',
+                        color: 'var(--text-primary)',
+                      }}
+                      required={categoryId === 'cat-other'}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>

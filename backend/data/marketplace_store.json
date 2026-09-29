@@ -1,6 +1,141 @@
 {
   "gigs": [
     {
+      "id": "gig-1790649781787",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "ufkkjvebef,boeiubioub",
+      "slug": "ufkkjvebef-boeiubioub-judm4h",
+      "description": "dfhwhfolw9ggmpcw99[oshube",
+      "budget_min": 1500,
+      "budgetMin": 1500,
+      "budget_max": 3000,
+      "budgetMax": 3000,
+      "deadline": "2026-11-15T00:00:00.000Z",
+      "categoryId": "3d-mode",
+      "categoryName": "3d mode",
+      "tags": [
+        "TypeScript",
+        "Next.js",
+        "Supabase"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "open",
+      "proposalsCount": 0,
+      "created_at": "2026-09-29T02:43:02.056Z",
+      "createdAt": "2026-09-29T02:43:02.056Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "Initial Discovery & Requirements Assessment",
+          "amount": 450
+        },
+        {
+          "title": "Core Milestone Execution & Draft Deliverable",
+          "amount": 600
+        },
+        {
+          "title": "Final Polish, Review & Handover Package",
+          "amount": 450
+        }
+      ]
+    },
+    {
+      "id": "gig-1790614091757",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "gopus",
+      "slug": "gopus-uom8yn",
+      "description": "huiimii,gnyhlihkojkojuoiu",
+      "budget_min": 1500,
+      "budgetMin": 1500,
+      "budget_max": 3000,
+      "budgetMax": 3000,
+      "deadline": "2026-11-15T00:00:00.000Z",
+      "categoryId": "ui-ux",
+      "categoryName": "UI/UX & Design Systems",
+      "tags": [
+        "TypeScript",
+        "Next.js",
+        "Supabase"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "open",
+      "proposalsCount": 0,
+      "created_at": "2026-09-28T16:48:12.633Z",
+      "createdAt": "2026-09-28T16:48:12.633Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 450
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 600
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 450
+        }
+      ]
+    },
+    {
+      "id": "gig-1790613936163",
+      "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "title": "iot",
+      "slug": "iot-dplkxf",
+      "description": "We are seeking a seasoned Principal Full-Stack & AI Engineer to design and deploy an end-to-end Enterprise RAG platform.\n\nKey Deliverables:\n1. Supabase pgvector embedding pipelines with hybrid sparse/dense search.\n2. Next.js 15 App Router interface with streaming token response & optimistic state caching.\n3. Row Level Security (RLS) policies ensuring strict enterprise data tenant isolation.\n4. Comprehensive Jest integration tests and GitHub Actions CI/CD deployment.",
+      "budget_min": 3500,
+      "budgetMin": 3500,
+      "budget_max": 5000,
+      "budgetMax": 5000,
+      "deadline": "2026-11-15T00:00:00.000Z",
+      "categoryId": "ai-ml",
+      "categoryName": "AI & Machine Learning",
+      "tags": [
+        "Next.js 15",
+        "TypeScript",
+        "Supabase",
+        "pgvector",
+        "LangChain",
+        "TailwindCSS"
+      ],
+      "reference_files": [],
+      "referenceFiles": [],
+      "status": "awarded",
+      "proposalsCount": 1,
+      "created_at": "2026-09-28T16:45:38.860Z",
+      "createdAt": "2026-09-28T16:45:38.860Z",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientCompany": "Enterprise Project",
+      "clientVerified": false,
+      "suggestedMilestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 1050
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 1400
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050
+        }
+      ]
+    },
+    {
       "id": "gig-1790528032533",
       "client_id": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
       "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
@@ -731,6 +866,41 @@
   ],
   "bids": [
     {
+      "id": "bid-1790613970438",
+      "gig_id": "gig-1790613936163",
+      "gigId": "gig-1790613936163",
+      "freelancer_id": "279c3df0-5762-4558-92f8-9913fe26b651",
+      "freelancerId": "279c3df0-5762-4558-92f8-9913fe26b651",
+      "proposed_price": 4250,
+      "proposedPrice": 4250,
+      "delivery_days": 14,
+      "deliveryDays": 14,
+      "cover_message": "Hi bosecli,\n\nI reviewed your requirements for \"iot\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbaca",
+      "coverMessage": "Hi bosecli,\n\nI reviewed your requirements for \"iot\" and would love to collaborate. With my background in modern full-stack & AI architecture, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within 14 days.\n\nBest regards,\nbaca",
+      "milestones": [
+        {
+          "title": "System Architecture & Schema Design",
+          "amount": 1050
+        },
+        {
+          "title": "Core Functionality & API Integration",
+          "amount": 1400
+        },
+        {
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050
+        }
+      ],
+      "status": "accepted",
+      "created_at": "2026-09-28T16:46:10.467Z",
+      "createdAt": "2026-09-28T16:46:10.467Z",
+      "freelancerName": "baca",
+      "freelancerTitle": "Verified Specialist",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=279c3df0-5762-4558-92f8-9913fe26b651",
+      "freelancerRating": 5,
+      "isVerified": true
+    },
+    {
       "id": "bid-1790528041272",
       "gig_id": "gig-1790528032533",
       "gigId": "gig-1790528032533",
@@ -1082,6 +1252,64 @@
     }
   ],
   "contracts": [
+    {
+      "id": "contract-1790613983322",
+      "gigId": "gig-1790613936163",
+      "gigTitle": "iot",
+      "clientId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "clientName": "bosecli",
+      "clientAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "freelancerId": "279c3df0-5762-4558-92f8-9913fe26b651",
+      "freelancerName": "baca",
+      "freelancerAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=279c3df0-5762-4558-92f8-9913fe26b651",
+      "status": "in_progress",
+      "amount": 4250,
+      "escrowFunded": true,
+      "deadline": "2026-10-12",
+      "createdAt": "2026-09-28T16:46:28.259Z",
+      "revisionCount": 0,
+      "milestones": [
+        {
+          "id": "m-1790613983322-0",
+          "title": "System Architecture & Schema Design",
+          "amount": 1050,
+          "status": "submitted",
+          "deadline": "2026-10-05",
+          "deliverableNote": "All requirements implemented and verified. Ready for milestone sign-off.",
+          "deliverableFiles": [],
+          "submittedAt": "2026-09-28T16:47:07.905Z",
+          "paymentStatus": "unpaid"
+        },
+        {
+          "id": "m-1790613983322-1",
+          "title": "Core Functionality & API Integration",
+          "amount": 1400,
+          "status": "pending",
+          "deadline": "2026-10-12",
+          "deliverableFiles": [],
+          "paymentStatus": "unpaid"
+        },
+        {
+          "id": "m-1790613983322-2",
+          "title": "Production Polish, Testing & Deployment",
+          "amount": 1050,
+          "status": "pending",
+          "deadline": "2026-10-19",
+          "deliverableFiles": [],
+          "paymentStatus": "unpaid"
+        }
+      ],
+      "deliverables": [
+        {
+          "id": "del-1790614027905",
+          "milestoneId": "m-1790613983322-0",
+          "title": "Deliverable for: System Architecture & Schema Design",
+          "description": "All requirements implemented and verified. Ready for milestone sign-off.",
+          "files": [],
+          "submittedAt": "2026-09-28T16:47:07.905Z"
+        }
+      ]
+    },
     {
       "id": "contract-1790528050167",
       "gigId": "gig-1790528032533",
@@ -2425,6 +2653,41 @@
       "attachments": [],
       "createdAt": "2026-09-27T16:54:43.065Z",
       "isRead": false
+    },
+    {
+      "id": "msg-1790613988260",
+      "orderId": "contract-1790613983322",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "Hello baca! I've accepted your proposal and funded the $4,250 escrow. Looking forward to collaborating!",
+      "createdAt": "2026-09-28T16:46:28.464Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790614027905",
+      "orderId": "contract-1790613983322",
+      "senderId": "279c3df0-5762-4558-92f8-9913fe26b651",
+      "senderName": "baca",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=279c3df0-5762-4558-92f8-9913fe26b651",
+      "senderRole": "freelancer",
+      "content": "📦 **Deliverable Submitted**: \"Deliverable for: System Architecture & Schema Design\"\nAll requirements implemented and verified. Ready for milestone sign-off.",
+      "attachments": [],
+      "createdAt": "2026-09-28T16:47:09.216Z",
+      "isRead": false
+    },
+    {
+      "id": "msg-1790614051855-giuf",
+      "orderId": "contract-1790613983322",
+      "senderId": "eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderName": "bosecli",
+      "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=eff9c94c-2e54-4526-b2c8-42ff821d8ee3",
+      "senderRole": "client",
+      "content": "hi",
+      "attachments": [],
+      "createdAt": "2026-09-28T16:47:33.668Z",
+      "isRead": false
     }
   ],
   "verifications": [
@@ -2525,6 +2788,103 @@
     }
   ],
   "tickets": [
+    {
+      "id": "ticket-1790614145112",
+      "ticketNumber": "#TCK-1306",
+      "userId": "279c3df0-5762-4558-92f8-9913fe26b651",
+      "userName": "baca",
+      "userEmail": "baca@gmail.com",
+      "userRole": "freelancer",
+      "userAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=279c3df0-5762-4558-92f8-9913fe26b651",
+      "subject": "n,n",
+      "category": "account_security",
+      "priority": "medium",
+      "status": "resolved",
+      "description": ";okllk",
+      "attachments": [],
+      "messages": [
+        {
+          "id": "msg-tck-1790614145112",
+          "ticketId": "ticket-1790614145112",
+          "senderId": "279c3df0-5762-4558-92f8-9913fe26b651",
+          "senderName": "baca",
+          "senderRole": "freelancer",
+          "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=279c3df0-5762-4558-92f8-9913fe26b651",
+          "content": ";okllk",
+          "attachments": [],
+          "createdAt": "2026-09-28T16:49:05.112Z"
+        },
+        {
+          "id": "msg-tck-1790614145114",
+          "ticketId": "ticket-1790614145112",
+          "senderId": "system-support-bot",
+          "senderName": "FreelanceStack Support Bot",
+          "senderRole": "support_agent",
+          "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=support-ai-bot",
+          "content": "👋 Hello baca! We have received your support inquiry regarding **n,n** (Reference: #TCK-1306). A Platform Administrator has been notified and is reviewing your case. Typical response turnaround is under 15 minutes.",
+          "createdAt": "2026-09-28T16:49:05.612Z"
+        },
+        {
+          "id": "msg-tck-1790614443104",
+          "ticketId": "ticket-1790614145112",
+          "senderId": "279c3df0-5762-4558-92f8-9913fe26b651",
+          "senderName": "baca",
+          "senderRole": "freelancer",
+          "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=279c3df0-5762-4558-92f8-9913fe26b651",
+          "content": "tq",
+          "attachments": [],
+          "createdAt": "2026-09-28T16:54:03.104Z"
+        },
+        {
+          "id": "msg-tck-1790614458665",
+          "ticketId": "ticket-1790614145112",
+          "senderId": "982adb5c-d817-4384-8df3-f029d2104f02",
+          "senderName": "Master Administrator",
+          "senderRole": "admin",
+          "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=admin-governance-shield",
+          "content": "ko",
+          "attachments": [],
+          "createdAt": "2026-09-28T16:54:18.665Z"
+        },
+        {
+          "id": "msg-tck-1790614467116",
+          "ticketId": "ticket-1790614145112",
+          "senderId": "279c3df0-5762-4558-92f8-9913fe26b651",
+          "senderName": "baca",
+          "senderRole": "freelancer",
+          "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=279c3df0-5762-4558-92f8-9913fe26b651",
+          "content": "lk",
+          "attachments": [],
+          "createdAt": "2026-09-28T16:54:27.116Z"
+        },
+        {
+          "id": "msg-tck-1790614477829",
+          "ticketId": "ticket-1790614145112",
+          "senderId": "279c3df0-5762-4558-92f8-9913fe26b651",
+          "senderName": "baca",
+          "senderRole": "freelancer",
+          "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=279c3df0-5762-4558-92f8-9913fe26b651",
+          "content": "k",
+          "attachments": [],
+          "createdAt": "2026-09-28T16:54:37.829Z"
+        },
+        {
+          "id": "msg-tck-1790614485578",
+          "ticketId": "ticket-1790614145112",
+          "senderId": "279c3df0-5762-4558-92f8-9913fe26b651",
+          "senderName": "baca",
+          "senderRole": "freelancer",
+          "senderAvatar": "https://api.dicebear.com/7.x/bottts/svg?seed=279c3df0-5762-4558-92f8-9913fe26b651",
+          "content": "jo",
+          "attachments": [],
+          "createdAt": "2026-09-28T16:54:45.578Z"
+        }
+      ],
+      "adminNotes": "",
+      "createdAt": "2026-09-28T16:49:05.112Z",
+      "updatedAt": "2026-09-28T16:55:02.451Z",
+      "resolvedAt": "2026-09-28T16:55:02.451Z"
+    },
     {
       "id": "ticket-1790486710274",
       "ticketNumber": "#TCK-6061",

@@ -70,13 +70,13 @@ export const GigDetailModal: React.FC = () => {
   const generateAiProposal = () => {
     setIsGeneratingAi(true);
     setTimeout(() => {
-      const skillsText = currentUser?.skills?.length ? currentUser.skills.slice(0, 3).join(', ') : 'modern full-stack & AI architecture';
-      const senderName = currentUser?.fullName || 'Senior Engineer';
-      const pitch = `Hi ${gig.clientName},\n\nI reviewed your requirements for "${gig.title}" and would love to collaborate. With my background in ${skillsText}, I have engineered similar high-performance architectures.\n\nMy approach:\n1. Structured architecture breakdown and clean modular codebase.\n2. Strict security compliance, automated unit & integration testing.\n3. Continuous milestone demonstrations and clear asynchronous documentation.\n\nI am available to start immediately and guarantee on-time delivery within ${deliveryDays} days.\n\nBest regards,\n${senderName}`;
+      const skillsText = currentUser?.skills?.length ? currentUser.skills.slice(0, 3).join(', ') : (gig.categoryName || 'professional delivery & strategy');
+      const senderName = currentUser?.fullName || 'Verified Specialist';
+      const pitch = `Hi ${gig.clientName},\n\nI reviewed your requirements for "${gig.title}" in ${gig.categoryName || 'this field'} and would love to collaborate. With my background in ${skillsText}, I have delivered similar high-impact projects with verified results.\n\nMy approach:\n1. Detailed requirements alignment and clear milestone execution roadmap.\n2. Strict quality standards, milestone deliverables, and transparent communication.\n3. Continuous milestone demonstrations and comprehensive handover package.\n\nI am available to start immediately and guarantee on-time delivery within ${deliveryDays} days.\n\nBest regards,\n${senderName}`;
       setCoverMessage(pitch);
       setIsGeneratingAi(false);
-      addToast('info', 'AI Pitch Generated ✨', 'Tailored proposal draft created based on project brief.');
-    }, 700);
+      addToast('info', 'Proposal Pitch Generated ✨', 'Tailored proposal draft created based on project brief.');
+    }, 500);
   };
 
   const handleApply = (e: React.FormEvent) => {

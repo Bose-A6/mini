@@ -47,23 +47,24 @@ export const PersonaSwitcher: React.FC = () => {
   return (
     <div className="persona-bar">
       <div className="persona-label">
-        <Sparkles size={16} />
-        <span>⚡ Quick Role Switch:</span>
+        <Sparkles size={14} color="var(--accent-primary)" />
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Demo Persona Switcher:</span>
       </div>
 
       <div className="persona-chips">
         {(['client', 'freelancer', 'admin'] as const).map((r) => {
           const isActive = currentUser?.role === r;
+          const label = r === 'client' ? 'Client Workspace' : r === 'freelancer' ? 'Freelancer Studio' : 'Admin & Governance';
           return (
             <button
               key={r}
               className={`persona-chip ${isActive ? 'active' : ''}`}
               onClick={() => handleRoleQuickSwitch(r)}
             >
-              {r === 'client' && <Briefcase size={12} />}
-              {r === 'freelancer' && <UserCheck size={12} />}
-              {r === 'admin' && <ShieldCheck size={12} />}
-              <span>{r.toUpperCase()}</span>
+              {r === 'client' && <Briefcase size={13} color={isActive ? '#93c5fd' : 'var(--text-muted)'} />}
+              {r === 'freelancer' && <UserCheck size={13} color={isActive ? '#6ee7b7' : 'var(--text-muted)'} />}
+              {r === 'admin' && <ShieldCheck size={13} color={isActive ? '#fde68a' : 'var(--text-muted)'} />}
+              <span>{label}</span>
             </button>
           );
         })}

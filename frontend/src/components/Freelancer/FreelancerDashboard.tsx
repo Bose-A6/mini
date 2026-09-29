@@ -23,6 +23,10 @@ import {
   Camera,
   LifeBuoy,
   Clock,
+  Calculator,
+  Scale,
+  Megaphone,
+  PenTool,
 } from 'lucide-react';
 import { GigDetailModal } from '../Marketplace/GigDetailModal';
 import { VerificationWizard } from '../Verification/VerificationWizard';
@@ -199,17 +203,41 @@ export const FreelancerDashboard: React.FC = () => {
 
   const getCategoryIcon = (slug: string) => {
     switch (slug) {
+      case 'accounting-bookkeeping':
+      case 'cat-accounting':
+        return <Calculator size={16} />;
+      case 'finance-cfo':
+      case 'cat-finance':
+        return <TrendingUp size={16} />;
+      case 'legal-compliance':
+      case 'cat-legal':
+        return <Scale size={16} />;
+      case 'growth-marketing':
+      case 'cat-marketing':
+        return <Megaphone size={16} />;
+      case 'writing-content':
+      case 'cat-writing':
+        return <PenTool size={16} />;
+      case 'operations-management':
+      case 'cat-bizops':
+        return <Briefcase size={16} />;
       case 'ai-ml':
+      case 'cat-ai':
         return <Sparkles size={16} />;
       case 'fullstack':
+      case 'cat-fullstack':
         return <Code size={16} />;
       case 'ui-ux':
+      case 'cat-uiux':
         return <Palette size={16} />;
       case 'cloud-devops':
+      case 'cat-devops':
         return <Server size={16} />;
       case 'mobile-apps':
+      case 'cat-mobile':
         return <Smartphone size={16} />;
       case 'web3':
+      case 'cat-web3':
         return <Cpu size={16} />;
       default:
         return <Briefcase size={16} />;
@@ -248,10 +276,10 @@ export const FreelancerDashboard: React.FC = () => {
                 fontSize: '0.9rem',
               }}
             >
-              <ShieldCheck size={18} /> FREELANCER PORTAL GATED:
+              <ShieldCheck size={18} /> PROFILE VERIFICATION REQUIRED:
             </span>
             <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-              Administrator verification & KYC approval required to unlock client project bidding, active escrows, and milestone payouts.
+              Complete your profile and identity verification to submit proposals on client projects and receive escrow payouts.
             </span>
           </div>
         </div>
@@ -281,16 +309,16 @@ export const FreelancerDashboard: React.FC = () => {
           />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span className="persona-badge badge-freelancer">Freelancer Engineering Suite</span>
+              <span className="persona-badge badge-freelancer">Freelancer Studio</span>
               {currentUser?.isVerified && (
                 <span className="featured-pill">
-                  <ShieldCheck size={12} /> Gold Verified Pro
+                  <ShieldCheck size={12} /> Verified Pro
                 </span>
               )}
             </div>
-            <h2>{currentUser?.fullName || 'Freelancer Workspace'}</h2>
+            <h2>{currentUser?.fullName || 'Freelancer Studio'}</h2>
             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              {currentUser?.professionalTitle || 'Real-time Freelancer Hub'} • {currentUser?.rating ?? 5.0} ★ ({currentUser?.completedProjects !== undefined ? Math.max(currentUser.completedProjects, myCompletedContracts.length) : myCompletedContracts.length} projects completed)
+              {currentUser?.professionalTitle || 'Freelance Profile'} • {currentUser?.rating ?? 5.0} ★ ({currentUser?.completedProjects !== undefined ? Math.max(currentUser.completedProjects, myCompletedContracts.length) : myCompletedContracts.length} projects completed)
             </p>
           </div>
         </div>
@@ -314,10 +342,10 @@ export const FreelancerDashboard: React.FC = () => {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <RefreshCw size={15} className={isSyncingGigs ? 'spin-icon' : ''} />
-            <span>{isSyncingGigs ? 'Syncing...' : 'Live Sync'}</span>
+            <span>{isSyncingGigs ? 'Syncing...' : 'Refresh'}</span>
           </button>
           <button className="btn-secondary" onClick={() => setActiveView('verification')}>
-            <ShieldCheck size={16} /> Trust & Verification Center
+            <ShieldCheck size={16} /> Trust & Verification
           </button>
           <button
             className="btn-secondary"
@@ -329,10 +357,10 @@ export const FreelancerDashboard: React.FC = () => {
               border: '1px solid rgba(16, 185, 129, 0.3)',
               color: 'var(--accent-emerald)',
             }}
-            title="Ask Admin Support & Clarify Doubts"
+            title="Ask Admin Support & Help"
           >
             <LifeBuoy size={16} />
-            <span>Support & Doubts</span>
+            <span>Support & Help</span>
           </button>
           <button
             className="btn-primary"
@@ -343,7 +371,7 @@ export const FreelancerDashboard: React.FC = () => {
               }, 50);
             }}
           >
-            <Sparkles size={16} /> Explore Available Gigs ({gigs.filter((g) => (g.status || 'open') === 'open').length})
+            <Sparkles size={16} /> Explore Open Projects ({gigs.filter((g) => (g.status || 'open') === 'open').length})
           </button>
         </div>
       </div>

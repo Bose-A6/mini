@@ -25,6 +25,7 @@ export const DirectContractModal: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [categoryName, setCategoryName] = useState('');
+  const [customCategoryName, setCustomCategoryName] = useState('');
   const [deadline, setDeadline] = useState('');
   const [projectBrief, setProjectBrief] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,7 +92,11 @@ export const DirectContractModal: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !categoryName.trim() || totalAmount <= 0) {
+    const effectiveCategory = (categoryName === 'cat-other' || categoryName === 'Other / Custom Work...')
+      ? customCategoryName.trim() || 'Custom Specialized Work'
+      : categoryName.trim();
+
+    if (!title.trim() || !effectiveCategory || totalAmount <= 0) {
       addToast('warning', 'Missing Fields', 'Please ensure title, domain, and valid milestone budgets are set.');
       return;
     }
@@ -103,7 +108,7 @@ export const DirectContractModal: React.FC = () => {
         freelancerName: partnerName,
         freelancerAvatar: partnerAvatar,
         title: title.trim(),
-        categoryName: categoryName.trim(),
+        categoryName: effectiveCategory,
         amount: totalAmount,
         deadline: deadline || new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0],
         milestones: milestones.map((m) => ({ title: m.title.trim(), amount: Number(m.amount) || 500 })),
@@ -231,7 +236,7 @@ export const DirectContractModal: React.FC = () => {
 
         <form onSubmit={handleSubmit}>
           {/* Project Title & Category */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '14px', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: (categoryName === 'cat-other' || categoryName === 'Other / Custom Work...') ? '1fr' : '1.4fr 1fr', gap: '14px', marginBottom: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 DIRECT CONTRACT TITLE *
@@ -259,9 +264,31 @@ export const DirectContractModal: React.FC = () => {
                     {cat.name}
                   </option>
                 ))}
+                <option value="Other / Custom Work...">✨ Other / Custom Work...</option>
               </select>
             </div>
           </div>
+
+          {(categoryName === 'cat-other' || categoryName === 'Other / Custom Work...') && (
+            <div style={{ marginBottom: '14px', animation: 'fadeIn 0.25s ease' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-amber)', marginBottom: '6px' }}>
+                ENTER CUSTOM WORK FIELD / DOMAIN *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Architectural 3D Rendering, Translation, Video Production..."
+                value={customCategoryName}
+                onChange={(e) => setCustomCategoryName(e.target.value)}
+                style={{
+                  width: '100%',
+                  borderColor: 'rgba(245, 158, 11, 0.5)',
+                  background: 'rgba(245, 158, 11, 0.05)',
+                  color: 'var(--text-primary)',
+                }}
+                required={categoryName === 'cat-other' || categoryName === 'Other / Custom Work...'}
+              />
+            </div>
+          )}
 
           {/* Project Brief */}
           <div style={{ marginBottom: '16px' }}>

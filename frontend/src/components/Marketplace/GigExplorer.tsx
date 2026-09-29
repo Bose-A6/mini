@@ -17,6 +17,10 @@ import {
   PlusCircle,
   UserCheck,
   RefreshCw,
+  Calculator,
+  Scale,
+  Megaphone,
+  PenTool,
 } from 'lucide-react';
 import { GigDetailModal } from './GigDetailModal';
 
@@ -30,17 +34,41 @@ export const GigExplorer: React.FC = () => {
 
   const getCategoryIcon = (slug: string) => {
     switch (slug) {
+      case 'accounting-bookkeeping':
+      case 'cat-accounting':
+        return <Calculator size={18} />;
+      case 'finance-cfo':
+      case 'cat-finance':
+        return <TrendingUp size={18} />;
+      case 'legal-compliance':
+      case 'cat-legal':
+        return <Scale size={18} />;
+      case 'growth-marketing':
+      case 'cat-marketing':
+        return <Megaphone size={18} />;
+      case 'writing-content':
+      case 'cat-writing':
+        return <PenTool size={18} />;
+      case 'operations-management':
+      case 'cat-bizops':
+        return <Briefcase size={18} />;
       case 'ai-ml':
+      case 'cat-ai':
         return <Sparkles size={18} />;
       case 'fullstack':
+      case 'cat-fullstack':
         return <Code size={18} />;
       case 'ui-ux':
+      case 'cat-uiux':
         return <Palette size={18} />;
       case 'cloud-devops':
+      case 'cat-devops':
         return <Server size={18} />;
       case 'mobile-apps':
+      case 'cat-mobile':
         return <Smartphone size={18} />;
       case 'web3':
+      case 'cat-web3':
         return <Cpu size={18} />;
       default:
         return <Briefcase size={18} />;
@@ -96,7 +124,7 @@ export const GigExplorer: React.FC = () => {
         <div className="hero-content">
           <div className="hero-badge">
             <Sparkles size={14} />
-            <span>Real-Time Escrow & Direct Supabase Backend</span>
+            <span>Verified Talent & Escrow Protection</span>
           </div>
 
           <h1 className="hero-title">
@@ -124,7 +152,7 @@ export const GigExplorer: React.FC = () => {
                   <PlusCircle size={18} /> Post a Project
                 </button>
                 <button className="btn-secondary" onClick={() => setActiveView('client')}>
-                  <Briefcase size={18} /> Client Command Center
+                  <Briefcase size={18} /> Client Workspace
                 </button>
               </>
             ) : isFreelancer ? (
@@ -139,7 +167,7 @@ export const GigExplorer: React.FC = () => {
                   <Sparkles size={18} /> Explore Client Projects
                 </button>
                 <button className="btn-secondary" onClick={() => setActiveView('freelancer')}>
-                  <UserCheck size={18} /> My Freelancer Workspace
+                  <UserCheck size={18} /> Freelancer Studio
                 </button>
               </>
             ) : (
