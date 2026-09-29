@@ -95,12 +95,32 @@ export const FreelancerDashboard: React.FC = () => {
   // Freelancer's items - strictly belonging to this authenticated freelancer
   const myBids = useMemo(() => {
     if (!currentUser) return [];
-    return (bids || []).filter((b) => String(b.freelancerId).trim() === String(currentUser.id).trim());
+    const currentId = String(currentUser.id || '').trim().toLowerCase();
+    const currentEmail = String(currentUser.email || '').trim().toLowerCase();
+    return (bids || []).filter((b) => {
+      const bFreelancerId = String(b.freelancerId || (b as any).freelancer_id || '').trim().toLowerCase();
+      const bFreelancerEmail = String((b as any).freelancerEmail || (b as any).userEmail || '').trim().toLowerCase();
+      return (
+        bFreelancerId === currentId ||
+        (currentEmail && (bFreelancerId === currentEmail || bFreelancerEmail === currentEmail)) ||
+        (currentUser.role === 'freelancer' && b.freelancerName === currentUser.fullName)
+      );
+    });
   }, [bids, currentUser]);
 
   const myContracts = useMemo(() => {
     if (!currentUser) return [];
-    return (contracts || []).filter((c) => String(c.freelancerId).trim() === String(currentUser.id).trim());
+    const currentId = String(currentUser.id || '').trim().toLowerCase();
+    const currentEmail = String(currentUser.email || '').trim().toLowerCase();
+    return (contracts || []).filter((c) => {
+      const cFreelancerId = String(c.freelancerId || (c as any).freelancer_id || '').trim().toLowerCase();
+      const cFreelancerEmail = String((c as any).freelancerEmail || '').trim().toLowerCase();
+      return (
+        cFreelancerId === currentId ||
+        (currentEmail && (cFreelancerId === currentEmail || cFreelancerEmail === currentEmail)) ||
+        (currentUser.role === 'freelancer' && c.freelancerName === currentUser.fullName)
+      );
+    });
   }, [contracts, currentUser]);
 
   const myPendingOffers = useMemo(() => {
