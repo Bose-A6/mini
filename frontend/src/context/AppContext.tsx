@@ -519,19 +519,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [backendConnected, setBackendConnected] = useState<boolean>(false);
   const [isCheckingBackend, setIsCheckingBackend] = useState<boolean>(false);
   const [isApiModalOpen, setIsApiModalOpen] = useState<boolean>(false);
+  const failCountRef = React.useRef(0);
 
   const checkBackendHealth = useCallback(async () => {
     try {
       setIsCheckingBackend(true);
       const url = getApiUrl();
-      const res = await fetch(`${url}/health`, { method: 'GET', signal: AbortSignal.timeout(4000) });
+      const res = await fetch(`${url}/health`, { method: 'GET', signal: AbortSignal.timeout(8000) });
       if (res.ok) {
+        failCountRef.current = 0;
         setBackendConnected(true);
       } else {
-        setBackendConnected(false);
+        failCountRef.current += 1;
+        if (failCountRef.current >= 2) {
+          setBackendConnected(false);
+        }
       }
     } catch {
-      setBackendConnected(false);
+      failCountRef.current += 1;
+      if (failCountRef.current >= 2) {
+        setBackendConnected(false);
+      }
     } finally {
       setIsCheckingBackend(false);
     }
@@ -549,12 +557,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {}
     }
     setApiUrlState(getApiUrl());
+    failCountRef.current = 0;
     checkBackendHealth();
   }, [checkBackendHealth]);
 
   useEffect(() => {
     checkBackendHealth();
-    const interval = setInterval(checkBackendHealth, 8000);
+    const interval = setInterval(checkBackendHealth, 10000);
     return () => clearInterval(interval);
   }, [checkBackendHealth]);
 
@@ -568,6 +577,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const contractsRes = await fetch(`${apiUrl}/api/marketplace/contracts`);
         if (contractsRes.ok) {
+          failCountRef.current = 0;
+          setBackendConnected(true);
           const contractsData = await contractsRes.json();
           if (contractsData && Array.isArray(contractsData.contracts)) {
             fetchedBackendContracts = contractsData.contracts.map(normalizeContract);
@@ -756,7 +767,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetchGigsFromBackend();
     const interval = setInterval(() => {
       fetchGigsFromBackend();
-    }, 2500);
+    }, 6000);
     return () => clearInterval(interval);
   }, [fetchGigsFromBackend]);
 
