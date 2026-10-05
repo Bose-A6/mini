@@ -155,14 +155,6 @@ interface AppContextType {
   setDirectContractFreelancer: (partner: Persona | CollaborationHistory | null) => void;
   openDirectContractModal: (partner: Persona | CollaborationHistory) => void;
 
-  // Backend Connection State & Config
-  backendConnected: boolean;
-  isCheckingBackend: boolean;
-  apiUrl: string;
-  setCustomApiUrl: (url: string) => void;
-  isApiModalOpen: boolean;
-  setIsApiModalOpen: (open: boolean) => void;
-
   // Notification & System Helpers
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
@@ -170,24 +162,6 @@ interface AppContextType {
   removeToast: (id: string) => void;
   triggerCelebration: () => void;
 }
-
-export const getApiUrl = (): string => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
-    return envUrl.trim().replace(/\/+$/, '');
-  }
-  if (typeof window !== 'undefined') {
-    const custom = localStorage.getItem('CUSTOM_API_URL');
-    if (custom && custom.trim().length > 0) {
-      return custom.trim().replace(/\/+$/, '');
-    }
-    // In production on Vercel or any live domain, use same origin
-    if (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
-      return window.location.origin;
-    }
-  }
-  return 'http://localhost:4000';
-};
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -519,70 +493,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => safeParse(STORAGE_KEYS.NOTIFICATIONS, []));
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const [apiUrl, setApiUrlState] = useState<string>(() => getApiUrl());
-  const [backendConnected, setBackendConnected] = useState<boolean>(false);
-  const [isCheckingBackend, setIsCheckingBackend] = useState<boolean>(false);
-  const [isApiModalOpen, setIsApiModalOpen] = useState<boolean>(false);
-  const failCountRef = React.useRef(0);
-
-  const checkBackendHealth = useCallback(async () => {
-    try {
-      setIsCheckingBackend(true);
-      const url = getApiUrl();
-      const res = await fetch(`${url}/health`, { method: 'GET', signal: AbortSignal.timeout(8000) });
-      if (res.ok) {
-        failCountRef.current = 0;
-        setBackendConnected(true);
-      } else {
-        failCountRef.current += 1;
-        if (failCountRef.current >= 2) {
-          setBackendConnected(false);
-        }
-      }
-    } catch {
-      failCountRef.current += 1;
-      if (failCountRef.current >= 2) {
-        setBackendConnected(false);
-      }
-    } finally {
-      setIsCheckingBackend(false);
-    }
-  }, []);
-
-  const setCustomApiUrl = useCallback((url: string) => {
-    const cleanUrl = url.trim().replace(/\/+$/, '');
-    if (cleanUrl) {
-      try {
-        localStorage.setItem('CUSTOM_API_URL', cleanUrl);
-      } catch {}
-    } else {
-      try {
-        localStorage.removeItem('CUSTOM_API_URL');
-      } catch {}
-    }
-    setApiUrlState(getApiUrl());
-    failCountRef.current = 0;
-    checkBackendHealth();
-  }, [checkBackendHealth]);
-
-  useEffect(() => {
-    checkBackendHealth();
-    const interval = setInterval(checkBackendHealth, 10000);
-    return () => clearInterval(interval);
-  }, [checkBackendHealth]);
-
   // Fetch gigs, bids, contracts, messages, and verifications from backend API and sync with state
   const fetchGigsFromBackend = useCallback(async () => {
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       
       // 1. Fetch Contracts
       let fetchedBackendContracts: OrderContract[] = [];
       try {
         const contractsRes = await fetch(`${apiUrl}/api/marketplace/contracts`);
         if (contractsRes.ok) {
-          failCountRef.current = 0;
-          setBackendConnected(true);
           const contractsData = await contractsRes.json();
           if (contractsData && Array.isArray(contractsData.contracts)) {
             fetchedBackendContracts = contractsData.contracts.map(normalizeContract);
@@ -771,7 +691,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetchGigsFromBackend();
     const interval = setInterval(() => {
       fetchGigsFromBackend();
-    }, 6000);
+    }, 2500);
     return () => clearInterval(interval);
   }, [fetchGigsFromBackend]);
 
@@ -982,7 +902,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 1. Try Backend authentication endpoint
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       try {
         const res = await fetch(`${apiUrl}/api/auth/login`, {
           method: 'POST',
@@ -1107,7 +1027,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 1. Try Backend signup endpoint
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       try {
         const res = await fetch(`${apiUrl}/api/auth/signup`, {
           method: 'POST',
@@ -1210,7 +1130,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 1. Try Backend verification
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       try {
         const res = await fetch(`${apiUrl}/api/auth/admin-login`, {
           method: 'POST',
@@ -1278,7 +1198,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await supabase.auth.signOut();
     } catch {}
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       await fetch(`${apiUrl}/api/auth/logout`, { method: 'POST' });
     } catch {}
     setCurrentUser(null);
@@ -1336,7 +1256,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Background sync to backend API
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/gigs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1437,7 +1357,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Sync proposal to backend API
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/gigs/${cleanGigId}/bids`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1623,7 +1543,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Sync contract creation to backend API
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/contracts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1740,7 +1660,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1832,7 +1752,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1914,7 +1834,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2044,7 +1964,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2208,7 +2128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2303,7 +2223,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2330,7 +2250,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((b) => (String(b.id).trim() === String(bidId).trim() ? { ...b, status: 'rejected' as const } : b))
     );
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/bids/${bidId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2373,7 +2293,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2478,7 +2398,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2571,7 +2491,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Backend sync
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/verifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2629,7 +2549,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Backend API sync
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/verifications/${verificationId}/decision`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2653,7 +2573,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Action: Admin Update Gig
   const adminUpdateGig = useCallback(async (gigId: string, data: Partial<Gig> & { action?: string }) => {
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       await fetch(`${apiUrl}/api/marketplace/admin/gigs/${gigId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2669,7 +2589,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Action: Admin Update Contract / Escrow Dispute
   const adminUpdateContract = useCallback(async (contractId: string, action: 'release_escrow' | 'refund_client' | 'mark_disputed', resolutionNotes?: string) => {
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       await fetch(`${apiUrl}/api/marketplace/admin/contracts/${contractId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2714,7 +2634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Sync to backend chat API
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${orderId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2820,7 +2740,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         const res = await fetch(`${apiUrl}/api/marketplace/tickets`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2892,7 +2812,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         await fetch(`${apiUrl}/api/marketplace/tickets/${ticketId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2935,7 +2855,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         await fetch(`${apiUrl}/api/marketplace/tickets/${ticketId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -3221,7 +3141,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Sync to backend
       try {
-        const apiUrl = getApiUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         fetch(`${apiUrl}/api/marketplace/contracts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3290,7 +3210,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3367,7 +3287,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3426,7 +3346,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3549,12 +3469,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       directContractFreelancer,
       setDirectContractFreelancer,
       openDirectContractModal,
-      backendConnected,
-      isCheckingBackend,
-      apiUrl,
-      setCustomApiUrl,
-      isApiModalOpen,
-      setIsApiModalOpen,
       markNotificationRead,
       markAllNotificationsRead,
       addToast,
@@ -3562,12 +3476,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       triggerCelebration,
     }),
     [
-      backendConnected,
-      isCheckingBackend,
-      apiUrl,
-      setCustomApiUrl,
-      isApiModalOpen,
-      setIsApiModalOpen,
       currentUser,
       categories,
       gigs,

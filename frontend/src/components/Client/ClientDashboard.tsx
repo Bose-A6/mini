@@ -63,17 +63,7 @@ export const ClientDashboard: React.FC = () => {
   // Client's gigs and proposals - strictly belonging to this authenticated client
   const clientGigs = useMemo(() => {
     if (!gigs || gigs.length === 0 || !currentUser) return [];
-    const currentId = String(currentUser.id || '').trim().toLowerCase();
-    const currentEmail = String(currentUser.email || '').trim().toLowerCase();
-    return gigs.filter((g) => {
-      const gClientId = String(g.clientId || (g as any).client_id || '').trim().toLowerCase();
-      const gClientEmail = String((g as any).clientEmail || (g as any).userEmail || '').trim().toLowerCase();
-      return (
-        gClientId === currentId ||
-        (currentEmail && (gClientId === currentEmail || gClientEmail === currentEmail)) ||
-        (currentUser.role === 'client' && g.clientName === currentUser.fullName)
-      );
-    });
+    return gigs.filter((g) => String(g.clientId).trim() === String(currentUser.id).trim());
   }, [gigs, currentUser]);
 
   const filteredClientGigs = useMemo(() => {
@@ -105,17 +95,7 @@ export const ClientDashboard: React.FC = () => {
 
   const allClientContracts = useMemo(() => {
     if (!currentUser) return [];
-    const currentId = String(currentUser.id || '').trim().toLowerCase();
-    const currentEmail = String(currentUser.email || '').trim().toLowerCase();
-    return (contracts || []).filter((c) => {
-      const cClientId = String(c.clientId || (c as any).client_id || '').trim().toLowerCase();
-      const cClientEmail = String((c as any).clientEmail || '').trim().toLowerCase();
-      return (
-        cClientId === currentId ||
-        (currentEmail && (cClientId === currentEmail || cClientEmail === currentEmail)) ||
-        (currentUser.role === 'client' && c.clientName === currentUser.fullName)
-      );
-    });
+    return (contracts || []).filter((c) => String(c.clientId).trim() === String(currentUser.id).trim());
   }, [contracts, currentUser]);
 
   const activeContracts = useMemo(() => {

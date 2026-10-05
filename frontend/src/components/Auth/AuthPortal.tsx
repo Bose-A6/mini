@@ -263,26 +263,23 @@ export const AuthPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* Live Status Badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Live Supabase Connection Badge */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '0.8rem',
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-full)',
-              background: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              color: 'var(--accent-emerald)',
-              fontWeight: 600,
-            }}
-          >
-            <Radio size={14} className="pulse-icon" />
-            <span>⚡ Supabase Live</span>
-          </div>
+        {/* Live Supabase Connection Badge */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.8rem',
+            padding: '6px 14px',
+            borderRadius: 'var(--radius-full)',
+            background: 'rgba(16, 185, 129, 0.12)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            color: 'var(--accent-emerald)',
+            fontWeight: 600,
+          }}
+        >
+          <Radio size={14} className="pulse-icon" />
+          <span>🟢 Supabase Connected & Real-Time Active</span>
         </div>
       </div>
 

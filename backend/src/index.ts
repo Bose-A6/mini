@@ -29,22 +29,12 @@ const allowedOrigins = Array.from(new Set([
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-
-    // If wildcard or vercel deployment or localhost or listed origin
-    if (
-      allowedOrigins.includes('*') ||
-      allowedOrigins.includes(origin) ||
-      origin.endsWith('.vercel.app') ||
-      origin.includes('localhost') ||
-      origin.includes('127.0.0.1')
-    ) {
-      return callback(null, true);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
     }
 
-    // Default permissive callback for all client frontend origins
-    return callback(null, true);
+    callback(new Error(`Origin ${origin} is not allowed by CORS`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -54,21 +44,6 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-app.get('/', (_req, res) => {
-  res.json({
-    ok: true,
-    service: 'marketplace-backend',
-    status: 'online',
-    health: '/health',
-    endpoints: {
-      auth: '/api/auth',
-      profile: '/api/profile',
-      verifications: '/api/verifications',
-      marketplace: '/api/marketplace',
-    },
-  });
-});
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'marketplace-backend', timestamp: new Date().toISOString() });
@@ -106,5 +81,3 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 app.listen(port, () => {
   console.log(`Backend listening on http://localhost:${port}`);
 });
-
-export default app;

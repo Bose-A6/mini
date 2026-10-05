@@ -3,7 +3,6 @@ import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import crypto from 'crypto';
 
 import { supabaseAdmin } from '../config/supabase.js';
 
@@ -14,34 +13,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../../data');
 const STORE_PATH = path.join(DATA_DIR, 'marketplace_store.json');
-
-export const toUUID = (str?: string): string => {
-  if (!str) return crypto.randomUUID();
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (uuidRegex.test(str)) return str;
-  const hash = crypto.createHash('md5').update(str).digest('hex');
-  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
-};
-
-export const ensureProfileExists = async (userId: string, email?: string, fullName?: string, role: string = 'client'): Promise<string> => {
-  const profileId = toUUID(userId);
-  try {
-    const cleanEmail = email && email.includes('@') ? email : `${userId.replace(/[^a-zA-Z0-9]/g, '') || 'user'}@freelancestack.dev`;
-    await supabaseAdmin.from('profiles').upsert({
-      id: profileId,
-      email: cleanEmail,
-      full_name: fullName || 'Platform Member',
-      role: role,
-      roles: [role],
-      is_verified: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
-  } catch (err: any) {
-    console.warn('Profile upsert notice:', err?.message || err);
-  }
-  return profileId;
-};
 
 // Initial seed gigs if store is completely empty
 const initialSeedGigs = [
@@ -614,10 +585,7 @@ const verificationSchema = z.object({
   pitchStatement: z.string().default(''),
   adminComment: z.string().optional(),
   reviewNotes: z.string().optional(),
-  submittedAt: z.string().optional(),
-  reviewedBy: z.string().optional(),
-  reviewedAt: z.string().optional(),
-}).passthrough();
+});
 
 const slugify = (value: string) => `${value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -779,33 +747,22 @@ router.post('/gigs', async (req, res) => {
     ],
   };
 
-  // Supabase PostgreSQL Persistence (Guaranteed Foreign Key & UUID Integrity)
+  // Attempt Supabase sync if valid UUID
   try {
-    const clientUUID = await ensureProfileExists(
-      userId,
-      (req.body as any)?.clientEmail || `${userId.replace(/[^a-zA-Z0-9]/g, '')}@freelancestack.dev`,
-      newGigData.clientName,
-      'client'
-    );
-    const gigUUID = toUUID(newGigData.id);
-    
     await supabaseAdmin
       .from('gigs')
-      .upsert({
-        id: gigUUID,
-        client_id: clientUUID,
+      .insert({
+        client_id: userId,
         title: parsed.data.title,
         slug: newGigData.slug,
         description: parsed.data.description,
         budget_min: parsed.data.budgetMin,
         budget_max: parsed.data.budgetMax,
         deadline: parsed.data.deadline ?? null,
-        reference_files: parsed.data.referenceFiles || [],
-        status: parsed.data.status || 'open',
-      }, { onConflict: 'id' });
-  } catch (err: any) {
-    console.warn('Supabase gig sync notice:', err?.message || err);
-  }
+        reference_files: parsed.data.referenceFiles,
+        status: parsed.data.status,
+      });
+  } catch {}
 
   const existingIdx = store.gigs.findIndex((g) => g.id === newGigData.id || g.slug === newGigData.slug);
   if (existingIdx >= 0) {
@@ -926,47 +883,17 @@ router.post('/gigs/:id/bids', async (req, res) => {
     isVerified: parsed.data.isVerified ?? true,
   };
 
-  // Supabase PostgreSQL Persistence (Guaranteed Foreign Key & UUID Integrity)
   try {
-    const freelancerUUID = await ensureProfileExists(
-      userId,
-      (req.body as any)?.freelancerEmail || `${userId.replace(/[^a-zA-Z0-9]/g, '')}@freelancestack.dev`,
-      newBid.freelancerName,
-      'freelancer'
-    );
-    const bidUUID = toUUID(newBid.id);
-    const gigUUID = toUUID(gigId);
-
-    // Make sure parent gig exists in Supabase so foreign key passes
-    const targetGig = store.gigs.find((g) => String(g.id).trim() === String(gigId).trim());
-    if (targetGig) {
-      const clientUUID = await ensureProfileExists(targetGig.clientId || 'client-1', undefined, targetGig.clientName, 'client');
-      await supabaseAdmin.from('gigs').upsert({
-        id: gigUUID,
-        client_id: clientUUID,
-        title: targetGig.title,
-        slug: targetGig.slug || slugify(targetGig.title),
-        description: targetGig.description || 'Project Scope',
-        budget_min: targetGig.budgetMin || 1000,
-        budget_max: targetGig.budgetMax || 5000,
-        status: targetGig.status || 'open',
-      }, { onConflict: 'id' });
-    }
-
     await supabaseAdmin
       .from('bids')
-      .upsert({
-        id: bidUUID,
-        gig_id: gigUUID,
-        freelancer_id: freelancerUUID,
+      .insert({
+        gig_id: gigId,
+        freelancer_id: userId,
         proposed_price: parsed.data.proposedPrice,
         delivery_days: parsed.data.deliveryDays,
-        cover_message: parsed.data.coverMessage ?? '',
-        status: 'pending',
-      }, { onConflict: 'id' });
-  } catch (err: any) {
-    console.warn('Supabase bid sync notice:', err?.message || err);
-  }
+        cover_message: parsed.data.coverMessage ?? null,
+      });
+  } catch {}
 
   // Remove existing bid for same freelancer & gig if re-applying
   const existingIdx = store.bids.findIndex((b) => (String(b.gigId || b.gig_id).trim() === String(gigId).trim()) && (String(b.freelancerId || b.freelancer_id).trim() === String(userId).trim()));
@@ -1296,33 +1223,11 @@ router.post('/verifications', async (req, res) => {
     store.verifications = [];
   }
 
-  // Supabase PostgreSQL Persistence for Verifications
-  try {
-    const freelancerUUID = await ensureProfileExists(
-      newVerif.userId,
-      newVerif.userEmail,
-      newVerif.userName,
-      'freelancer'
-    );
-    const verifUUID = toUUID(newVerif.id);
-
-    await supabaseAdmin
-      .from('freelancer_verifications')
-      .upsert({
-        id: verifUUID,
-        user_id: freelancerUUID,
-        status: newVerif.status || 'pending',
-        id_document_url: newVerif.idDocumentUrl,
-        selfie_url: newVerif.selfieUrl,
-        portfolio_files: newVerif.portfolioFiles || [],
-        certificates: newVerif.certificates || [],
-        external_links: newVerif.externalLinks || [],
-        skill_tags: newVerif.skillTags || [],
-        pitch_statement: newVerif.pitchStatement || '',
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
-  } catch (err: any) {
-    console.warn('Supabase verification sync notice:', err?.message || err);
+  const existingIdx = store.verifications.findIndex((v) => v.id === newVerif.id || v.userId === newVerif.userId);
+  if (existingIdx >= 0) {
+    store.verifications[existingIdx] = newVerif;
+  } else {
+    store.verifications.unshift(newVerif);
   }
 
   saveStore(store);
