@@ -278,12 +278,12 @@ export const getFreelancerRatingStats = (freelancerId: string, allContracts: Ord
 };
 
 export const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return ''; // Same-origin relative path on Vercel deployment
+  }
   const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl !== undefined && envUrl !== '') {
     return envUrl;
-  }
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return ''; // Same-origin relative path on Vercel deployment
   }
   return 'http://localhost:4000';
 };
@@ -1068,6 +1068,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             skills: [],
           };
 
+          // Guarantee profile row in Supabase
+          try {
+            await supabase.from('profiles').upsert({
+              id: payload.user.id,
+              email: cleanEmail,
+              full_name: user.fullName,
+              role,
+              roles: [role],
+              is_verified: isVerified,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'id' });
+          } catch {}
+
           setCurrentUser(user);
           setIsAuthModalOpen(false);
           setActiveViewState(role as AppView);
@@ -1120,6 +1133,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         skills: [],
       };
 
+      // Guarantee profile row in Supabase
+      try {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          email: cleanEmail,
+          full_name: fullName,
+          role,
+          roles: [role],
+          is_verified: isVerified,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+      } catch {}
+
       setCurrentUser(user);
       setIsAuthModalOpen(false);
       setActiveViewState(role as AppView);
@@ -1128,7 +1154,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err: any) {
       return { success: false, error: err?.message || 'Login failed. Please verify your connection.' };
     }
-  }, [addToast]);
+  }, [addToast, verifications]);
 
   // Strict Supabase & Backend Signup Action
   const signup = useCallback(async (
@@ -1182,6 +1208,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             bio: '',
             skills: [],
           };
+
+          // Guarantee profile row in Supabase
+          try {
+            await supabase.from('profiles').upsert({
+              id: payload.user.id,
+              email: cleanEmail,
+              full_name: cleanName,
+              role,
+              roles: [role],
+              is_verified: role === 'admin',
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'id' });
+          } catch {}
 
           setCurrentUser(user);
           setIsAuthModalOpen(false);
@@ -1239,6 +1278,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bio: '',
         skills: [],
       };
+
+      // Guarantee profile row in Supabase
+      try {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          email: cleanEmail,
+          full_name: cleanName,
+          role,
+          roles: [role],
+          is_verified: role === 'admin',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+      } catch {}
 
       setCurrentUser(user);
       setIsAuthModalOpen(false);
