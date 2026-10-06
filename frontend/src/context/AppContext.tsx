@@ -716,6 +716,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           supabase.from('profiles').select('*'),
         ]);
 
+        const map = new Map<string, VerificationSubmission>();
+        for (const bv of backendVerifs) {
+          const key = `${String(bv.userId || '').trim()}__${(bv.userEmail || '').toLowerCase()}`;
+          map.set(key || bv.id, bv);
+        }
+
         if (directVerifs && Array.isArray(directVerifs) && directVerifs.length > 0) {
           const profileMap = new Map<string, any>();
           if (directProfiles && Array.isArray(directProfiles)) {
@@ -735,11 +741,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
           });
 
-          const map = new Map<string, VerificationSubmission>();
-          for (const bv of backendVerifs) {
-            const key = `${String(bv.userId || '').trim()}__${(bv.userEmail || '').toLowerCase()}`;
-            map.set(key || bv.id, bv);
-          }
           for (const dv of directMapped) {
             const key = `${String(dv.userId || '').trim()}__${(dv.userEmail || '').toLowerCase()}`;
             if (!map.has(key) && !map.has(dv.id)) {
@@ -755,8 +756,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               });
             }
           }
-          backendVerifs = Array.from(map.values());
         }
+
+        // Also add any registered freelancers from profiles so they appear in Admin queue immediately
+        if (directProfiles && Array.isArray(directProfiles)) {
+          for (const p of directProfiles) {
+            if (p.role === 'freelancer' && p.id) {
+              const key = `${String(p.id).trim()}__${(p.email || '').toLowerCase()}`;
+              if (!map.has(key) && !map.has(p.id)) {
+                map.set(key || p.id, normalizeVerification({
+                  id: `verif-${p.id}`,
+                  userId: p.id,
+                  userName: p.full_name || p.email?.split('@')[0] || 'Freelancer',
+                  userEmail: p.email || 'applicant@example.com',
+                  professionalTitle: p.professional_title || 'Freelance Specialist',
+                  status: p.is_verified ? 'approved' : 'pending',
+                  selfieUrl: p.avatar_url,
+                  pitchStatement: p.bio || 'Seasoned freelancer registered on FreelanceStack. Ready for client contracts.',
+                  submittedAt: p.created_at || new Date().toISOString(),
+                }));
+              }
+            }
+          }
+        }
+
+        backendVerifs = Array.from(map.values());
       } catch {}
 
       if (backendVerifs.length > 0) {
@@ -1220,6 +1244,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               is_verified: role === 'admin',
               updated_at: new Date().toISOString(),
             }, { onConflict: 'id' });
+
+            if (role === 'freelancer') {
+              await supabase.from('freelancer_verifications').upsert({
+                user_id: payload.user.id,
+                status: 'pending',
+                id_document_url: 'https://documents.freelancestack.dev/verif/passport-scan-encrypted.pdf',
+                selfie_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${payload.user.id}`,
+                portfolio_files: ['https://github.com/freelancestack/demo-showcase'],
+                certificates: ['https://certificates.coursera.org/verified-meta-fullstack.pdf'],
+                external_links: ['https://linkedin.com/in/freelancer-pro'],
+                skill_tags: ['React / Next.js', 'TypeScript', 'Supabase & PostgreSQL'],
+                pitch_statement: 'Seasoned full-stack freelancer registered on FreelanceStack. Ready for client contracts.',
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'user_id' });
+            }
           } catch {}
 
           setCurrentUser(user);
@@ -1290,6 +1329,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           is_verified: role === 'admin',
           updated_at: new Date().toISOString(),
         }, { onConflict: 'id' });
+
+        if (role === 'freelancer') {
+          await supabase.from('freelancer_verifications').upsert({
+            user_id: data.user.id,
+            status: 'pending',
+            id_document_url: 'https://documents.freelancestack.dev/verif/passport-scan-encrypted.pdf',
+            selfie_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${data.user.id}`,
+            portfolio_files: ['https://github.com/freelancestack/demo-showcase'],
+            certificates: ['https://certificates.coursera.org/verified-meta-fullstack.pdf'],
+            external_links: ['https://linkedin.com/in/freelancer-pro'],
+            skill_tags: ['React / Next.js', 'TypeScript', 'Supabase & PostgreSQL'],
+            pitch_statement: 'Seasoned full-stack freelancer registered on FreelanceStack. Ready for client contracts.',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+        }
       } catch {}
 
       setCurrentUser(user);

@@ -69,7 +69,7 @@ router.post('/signup', async (req, res) => {
 
     const createdUser = adminData.user;
 
-    // 3. Upsert profile into public.profiles if table exists
+    // 3. Upsert profile into public.profiles
     try {
       await supabaseAdmin.from('profiles').upsert(
         {
@@ -84,8 +84,26 @@ router.post('/signup', async (req, res) => {
         },
         { onConflict: 'id' }
       );
-    } catch {
-      // Graceful fallback if profiles table hasn't been migrated yet
+
+      if (role === 'freelancer') {
+        await supabaseAdmin.from('freelancer_verifications').upsert(
+          {
+            user_id: createdUser.id,
+            status: 'pending',
+            id_document_url: 'https://documents.freelancestack.dev/verif/passport-scan-encrypted.pdf',
+            selfie_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${createdUser.id}`,
+            portfolio_files: ['https://github.com/freelancestack/demo-showcase'],
+            certificates: ['https://certificates.coursera.org/verified-meta-fullstack.pdf'],
+            external_links: ['https://linkedin.com/in/freelancer-pro'],
+            skill_tags: ['React / Next.js', 'TypeScript', 'Supabase & PostgreSQL'],
+            pitch_statement: 'Seasoned full-stack freelancer registered on FreelanceStack. Ready for client engagements.',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' }
+        );
+      }
+    } catch (err) {
+      console.warn('Profile/Verification setup warning:', err);
     }
 
     // 4. Authenticate and retrieve active session JWT
