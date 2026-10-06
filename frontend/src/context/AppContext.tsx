@@ -277,17 +277,6 @@ export const getFreelancerRatingStats = (freelancerId: string, allContracts: Ord
   };
 };
 
-export const getApiBaseUrl = (): string => {
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return ''; // Same-origin relative path on Vercel deployment
-  }
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl !== undefined && envUrl !== '') {
-    return envUrl;
-  }
-  return 'http://localhost:4000';
-};
-
 export const normalizeBid = (raw: any): Bid => {
   return {
     id: String(raw.id || `bid-${Date.now()}`),
@@ -422,8 +411,6 @@ export const normalizeMessage = (raw: any): ChatMessage => {
     isRead: Boolean(raw.isRead ?? raw.is_read ?? false),
   };
 };
-
-const isUUID = (str?: string | null): boolean => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(str || '').trim());
 
 export const normalizeVerification = (raw: any): VerificationSubmission => {
   return {
@@ -568,7 +555,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isFetchingRef.current = true;
 
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       
       const [contractsRes, gigsRes, bidsRes, messagesRes, verifsRes, ticketsRes] = await Promise.allSettled([
         fetch(`${apiUrl}/api/marketplace/contracts`).then((r) => (r.ok ? r.json() : null)),
@@ -704,96 +691,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 5. Process Verifications
-      let backendVerifs: VerificationSubmission[] = [];
-      if (verifsRes.status === 'fulfilled' && verifsRes.value?.verifications && Array.isArray(verifsRes.value.verifications)) {
-        backendVerifs = verifsRes.value.verifications.map(normalizeVerification);
-      }
-
-      // Always query Supabase directly and enrich with profiles to guarantee zero data loss
-      try {
-        const [{ data: directVerifs }, { data: directProfiles }] = await Promise.all([
-          supabase.from('freelancer_verifications').select('*'),
-          supabase.from('profiles').select('*'),
-        ]);
-
-        const map = new Map<string, VerificationSubmission>();
-        for (const bv of backendVerifs) {
-          const key = `${String(bv.userId || '').trim()}__${(bv.userEmail || '').toLowerCase()}`;
-          map.set(key || bv.id, bv);
-        }
-
-        if (directVerifs && Array.isArray(directVerifs) && directVerifs.length > 0) {
-          const profileMap = new Map<string, any>();
-          if (directProfiles && Array.isArray(directProfiles)) {
-            for (const p of directProfiles) {
-              if (p.id) profileMap.set(p.id, p);
-            }
-          }
-
-          const directMapped = directVerifs.map((dv) => {
-            const p = profileMap.get(dv.user_id);
-            return normalizeVerification({
-              ...dv,
-              userName: p?.full_name || dv.user_name || 'Applicant',
-              userEmail: p?.email || dv.user_email || 'applicant@example.com',
-              professionalTitle: p?.professional_title || dv.professional_title || 'Software Specialist',
-              selfieUrl: dv.selfie_url || p?.avatar_url,
-            });
-          });
-
-          for (const dv of directMapped) {
-            const key = `${String(dv.userId || '').trim()}__${(dv.userEmail || '').toLowerCase()}`;
-            if (!map.has(key) && !map.has(dv.id)) {
-              map.set(key || dv.id, dv);
-            } else {
-              const existingKey = map.has(key) ? key : dv.id;
-              const existing = map.get(existingKey)!;
-              map.set(existingKey, {
-                ...existing,
-                ...dv,
-                userName: dv.userName && dv.userName !== 'Applicant' ? dv.userName : existing.userName,
-                userEmail: dv.userEmail && dv.userEmail !== 'applicant@example.com' ? dv.userEmail : existing.userEmail,
-              });
-            }
-          }
-        }
-
-        // Also add any registered freelancers from profiles so they appear in Admin queue immediately
-        if (directProfiles && Array.isArray(directProfiles)) {
-          for (const p of directProfiles) {
-            if (p.role === 'freelancer' && p.id) {
-              const key = `${String(p.id).trim()}__${(p.email || '').toLowerCase()}`;
-              if (!map.has(key) && !map.has(p.id)) {
-                map.set(key || p.id, normalizeVerification({
-                  id: `verif-${p.id}`,
-                  userId: p.id,
-                  userName: p.full_name || p.email?.split('@')[0] || 'Freelancer',
-                  userEmail: p.email || 'applicant@example.com',
-                  professionalTitle: p.professional_title || 'Freelance Specialist',
-                  status: p.is_verified ? 'approved' : 'pending',
-                  selfieUrl: p.avatar_url,
-                  pitchStatement: p.bio || 'Seasoned freelancer registered on FreelanceStack. Ready for client contracts.',
-                  submittedAt: p.created_at || new Date().toISOString(),
-                }));
-              }
-            }
-          }
-        }
-
-        backendVerifs = Array.from(map.values());
-      } catch {}
-
-      if (backendVerifs.length > 0) {
+      if (verifsRes.status === 'fulfilled' && verifsRes.value?.verifications) {
+        const backendVerifs: VerificationSubmission[] = verifsRes.value.verifications.map(normalizeVerification);
         setVerifications((prev) => {
           const verifMap = new Map<string, VerificationSubmission>();
-          for (const v of prev || []) {
-            const key = `${String(v.userId || '').trim()}__${(v.userEmail || '').toLowerCase()}`;
-            verifMap.set(key || v.id, v);
-          }
-          for (const bv of backendVerifs) {
-            const key = `${String(bv.userId || '').trim()}__${(bv.userEmail || '').toLowerCase()}`;
-            verifMap.set(key || bv.id, bv);
-          }
+          for (const v of prev || []) verifMap.set(String(v.id).trim(), v);
+          for (const bv of backendVerifs) verifMap.set(String(bv.id).trim(), bv);
           const combined = Array.from(verifMap.values());
           combined.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
           try { localStorage.setItem(STORAGE_KEYS.VERIFICATIONS, JSON.stringify(combined)); } catch {}
@@ -1050,7 +953,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 1. Try Backend authentication endpoint
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       try {
         const res = await fetch(`${apiUrl}/api/auth/login`, {
           method: 'POST',
@@ -1091,19 +994,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             bio: '',
             skills: [],
           };
-
-          // Guarantee profile row in Supabase
-          try {
-            await supabase.from('profiles').upsert({
-              id: payload.user.id,
-              email: cleanEmail,
-              full_name: user.fullName,
-              role,
-              roles: [role],
-              is_verified: isVerified,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'id' });
-          } catch {}
 
           setCurrentUser(user);
           setIsAuthModalOpen(false);
@@ -1157,19 +1047,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         skills: [],
       };
 
-      // Guarantee profile row in Supabase
-      try {
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          email: cleanEmail,
-          full_name: fullName,
-          role,
-          roles: [role],
-          is_verified: isVerified,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
-      } catch {}
-
       setCurrentUser(user);
       setIsAuthModalOpen(false);
       setActiveViewState(role as AppView);
@@ -1178,7 +1055,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err: any) {
       return { success: false, error: err?.message || 'Login failed. Please verify your connection.' };
     }
-  }, [addToast, verifications]);
+  }, [addToast]);
 
   // Strict Supabase & Backend Signup Action
   const signup = useCallback(async (
@@ -1201,7 +1078,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 1. Try Backend signup endpoint
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       try {
         const res = await fetch(`${apiUrl}/api/auth/signup`, {
           method: 'POST',
@@ -1233,34 +1110,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             skills: [],
           };
 
-          // Guarantee profile row in Supabase
-          try {
-            await supabase.from('profiles').upsert({
-              id: payload.user.id,
-              email: cleanEmail,
-              full_name: cleanName,
-              role,
-              roles: [role],
-              is_verified: role === 'admin',
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'id' });
-
-            if (role === 'freelancer') {
-              await supabase.from('freelancer_verifications').upsert({
-                user_id: payload.user.id,
-                status: 'pending',
-                id_document_url: 'https://documents.freelancestack.dev/verif/passport-scan-encrypted.pdf',
-                selfie_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${payload.user.id}`,
-                portfolio_files: ['https://github.com/freelancestack/demo-showcase'],
-                certificates: ['https://certificates.coursera.org/verified-meta-fullstack.pdf'],
-                external_links: ['https://linkedin.com/in/freelancer-pro'],
-                skill_tags: ['React / Next.js', 'TypeScript', 'Supabase & PostgreSQL'],
-                pitch_statement: 'Seasoned full-stack freelancer registered on FreelanceStack. Ready for client contracts.',
-                updated_at: new Date().toISOString(),
-              }, { onConflict: 'user_id' });
-            }
-          } catch {}
-
           setCurrentUser(user);
           setIsAuthModalOpen(false);
           setActiveViewState(role as AppView);
@@ -1284,15 +1133,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (error || !data?.user) {
         if (error?.message?.includes('already registered') || error?.message?.includes('already exists')) {
           return await login(cleanEmail, cleanPass);
-        }
-        if (error?.message?.toLowerCase().includes('rate limit')) {
-          // Attempt sign in in case user account was already created
-          const loginRes = await login(cleanEmail, cleanPass);
-          if (loginRes.success) return loginRes;
-          return {
-            success: false,
-            error: 'Supabase email rate limit reached (max 3-4 emails/hr on free tier). Please disable "Confirm email" in Supabase Dashboard -> Authentication -> Providers -> Email, or sign in directly.',
-          };
         }
         return {
           success: false,
@@ -1318,34 +1158,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         skills: [],
       };
 
-      // Guarantee profile row in Supabase
-      try {
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          email: cleanEmail,
-          full_name: cleanName,
-          role,
-          roles: [role],
-          is_verified: role === 'admin',
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
-
-        if (role === 'freelancer') {
-          await supabase.from('freelancer_verifications').upsert({
-            user_id: data.user.id,
-            status: 'pending',
-            id_document_url: 'https://documents.freelancestack.dev/verif/passport-scan-encrypted.pdf',
-            selfie_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${data.user.id}`,
-            portfolio_files: ['https://github.com/freelancestack/demo-showcase'],
-            certificates: ['https://certificates.coursera.org/verified-meta-fullstack.pdf'],
-            external_links: ['https://linkedin.com/in/freelancer-pro'],
-            skill_tags: ['React / Next.js', 'TypeScript', 'Supabase & PostgreSQL'],
-            pitch_statement: 'Seasoned full-stack freelancer registered on FreelanceStack. Ready for client contracts.',
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id' });
-        }
-      } catch {}
-
       setCurrentUser(user);
       setIsAuthModalOpen(false);
       setActiveViewState(role as AppView);
@@ -1369,7 +1181,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 1. Try Backend verification
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       try {
         const res = await fetch(`${apiUrl}/api/auth/admin-login`, {
           method: 'POST',
@@ -1437,7 +1249,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await supabase.auth.signOut();
     } catch {}
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       await fetch(`${apiUrl}/api/auth/logout`, { method: 'POST' });
     } catch {}
     setCurrentUser(null);
@@ -1501,7 +1313,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Background sync to backend API
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/gigs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1614,7 +1426,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Sync proposal to backend API
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/gigs/${cleanGigId}/bids`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1800,7 +1612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Sync contract creation to backend API
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/contracts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1917,7 +1729,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2009,7 +1821,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2091,7 +1903,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2221,7 +2033,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2385,7 +2197,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2480,7 +2292,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2507,7 +2319,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((b) => (String(b.id).trim() === String(bidId).trim() ? { ...b, status: 'rejected' as const } : b))
     );
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/bids/${bidId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2550,7 +2362,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2674,7 +2486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMessages((prev) => [...prev, msg]);
 
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2718,7 +2530,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerCelebration();
   }, [contracts, currentUser, addToast, triggerCelebration]);
 
-  // Action: Submit Verification (Connected to Backend & Admin Queue & Supabase Direct)
+  // Action: Submit Verification (Connected to Backend & Admin Queue)
   const submitVerification = useCallback((data: Omit<VerificationSubmission, 'id' | 'userId' | 'userName' | 'userEmail' | 'status' | 'submittedAt'>): VerificationSubmission => {
     const user = currentUser || {
       id: `freelancer-${Date.now()}`,
@@ -2765,9 +2577,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser((prev) => (prev ? { ...prev, isVerified: false } : null));
     }
 
-    // 1. Backend REST API sync
+    // Backend sync
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/verifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2777,38 +2589,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .then(() => fetchGigsFromBackend())
         .catch(() => {});
     } catch {}
-
-    // 2. Direct Supabase Client sync
-    (async () => {
-      try {
-        const { data: authSession } = await supabase.auth.getSession();
-        const currentAuthUser = authSession?.session?.user;
-        const targetUserId = currentAuthUser?.id || (user.id && isUUID(user.id) ? user.id : null);
-        if (targetUserId) {
-          await supabase.from('profiles').upsert({
-            id: targetUserId,
-            email: user.email,
-            full_name: user.fullName,
-            role: 'freelancer',
-            is_verified: false,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
-
-          await supabase.from('freelancer_verifications').upsert({
-            user_id: targetUserId,
-            status: 'pending',
-            id_document_url: newVerif.idDocumentUrl || null,
-            selfie_url: newVerif.selfieUrl || null,
-            portfolio_files: Array.isArray(newVerif.portfolioFiles) ? newVerif.portfolioFiles : [],
-            certificates: Array.isArray(newVerif.certificates) ? newVerif.certificates : [],
-            external_links: Array.isArray(newVerif.externalLinks) ? newVerif.externalLinks : [],
-            skill_tags: Array.isArray(newVerif.skillTags) ? newVerif.skillTags : [],
-            pitch_statement: newVerif.pitchStatement || '',
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id' });
-        }
-      } catch {}
-    })();
 
     addToast('success', 'Verification Submitted! ⏳', 'Queued for Platform Administrator review and approval.');
     triggerCelebration();
@@ -2855,9 +2635,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser((prev) => (prev ? { ...prev, isVerified: status === 'approved' } : null));
     }
 
-    // 1. Backend API sync
+    // Backend API sync
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/verifications/${verificationId}/decision`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2867,25 +2647,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .then(() => fetchGigsFromBackend())
         .catch(() => {});
     } catch {}
-
-    // 2. Direct Supabase sync
-    (async () => {
-      try {
-        if (candidateId && isUUID(candidateId)) {
-          await supabase.from('freelancer_verifications').update({
-            status,
-            admin_comment: adminComment,
-            reviewed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }).eq('user_id', candidateId);
-
-          await supabase.from('profiles').update({
-            is_verified: status === 'approved',
-            updated_at: new Date().toISOString(),
-          }).eq('id', candidateId);
-        }
-      } catch {}
-    })();
 
     addToast(
       status === 'approved' ? 'success' : status === 'rejected' ? 'warning' : 'info',
@@ -2900,7 +2661,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Action: Admin Update Gig
   const adminUpdateGig = useCallback(async (gigId: string, data: Partial<Gig> & { action?: string }) => {
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       await fetch(`${apiUrl}/api/marketplace/admin/gigs/${gigId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2916,7 +2677,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Action: Admin Update Contract / Escrow Dispute
   const adminUpdateContract = useCallback(async (contractId: string, action: 'release_escrow' | 'refund_client' | 'mark_disputed', resolutionNotes?: string) => {
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       await fetch(`${apiUrl}/api/marketplace/admin/contracts/${contractId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2961,7 +2722,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Sync to backend chat API
     try {
-      const apiUrl = getApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       fetch(`${apiUrl}/api/marketplace/orders/${orderId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -3067,7 +2828,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiBaseUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         const res = await fetch(`${apiUrl}/api/marketplace/tickets`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3139,7 +2900,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiBaseUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         await fetch(`${apiUrl}/api/marketplace/tickets/${ticketId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3182,7 +2943,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiBaseUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         await fetch(`${apiUrl}/api/marketplace/tickets/${ticketId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -3468,7 +3229,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Sync to backend
       try {
-        const apiUrl = getApiBaseUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         fetch(`${apiUrl}/api/marketplace/contracts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3537,7 +3298,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiBaseUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3614,7 +3375,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiBaseUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3673,7 +3434,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Backend sync
       try {
-        const apiUrl = getApiBaseUrl();
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         fetch(`${apiUrl}/api/marketplace/orders/${contractId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

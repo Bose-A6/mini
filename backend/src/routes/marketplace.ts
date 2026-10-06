@@ -636,64 +636,29 @@ const isValidUUID = (id?: string | null): boolean => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id).trim());
 };
 
-const resolveUserIdToUUID = async (identifier?: string, email?: string, fullName?: string): Promise<string | null> => {
+const resolveUserIdToUUID = async (identifier?: string, email?: string): Promise<string | null> => {
   if (!identifier && !email) return null;
-  
-  if (identifier && isValidUUID(identifier)) {
-    try {
-      await supabaseAdmin.from('profiles').upsert({
-        id: identifier,
-        email: email || undefined,
-        full_name: fullName || 'User',
-        role: 'freelancer',
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
-    } catch {}
-    return identifier;
-  }
+  if (identifier && isValidUUID(identifier)) return identifier;
   
   try {
     const targetEmail = (email || (identifier && identifier.includes('@') ? identifier : '')).trim().toLowerCase();
     if (targetEmail) {
       const { data } = await supabaseAdmin.from('profiles').select('id').eq('email', targetEmail).maybeSingle();
       if (data?.id && isValidUUID(data.id)) return data.id;
-
-      const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
-      const authUser = userList?.users?.find((u) => u.email?.toLowerCase() === targetEmail);
-      if (authUser?.id && isValidUUID(authUser.id)) {
-        await supabaseAdmin.from('profiles').upsert({
-          id: authUser.id,
-          email: targetEmail,
-          full_name: fullName || authUser.user_metadata?.full_name || 'User',
-          role: 'freelancer',
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
-        return authUser.id;
-      }
-
-      // If user not in auth, upsert a profile row with a fresh UUID
-      const { data: createdProfile } = await supabaseAdmin.from('profiles').upsert({
-        email: targetEmail,
-        full_name: fullName || targetEmail.split('@')[0],
-        role: 'freelancer',
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'email' }).select('id').maybeSingle();
-
-      if (createdProfile?.id && isValidUUID(createdProfile.id)) {
-        return createdProfile.id;
-      }
     }
-  } catch (err) {
-    console.warn('resolveUserIdToUUID error:', err);
-  }
+    const { data: profileData } = await supabaseAdmin.from('profiles').select('id').limit(1);
+    if (profileData && profileData.length > 0 && isValidUUID(profileData[0].id)) {
+      return profileData[0].id;
+    }
+  } catch {}
   return null;
 };
 
 const syncVerificationToSupabase = async (verif: any) => {
   try {
-    const targetUserId = await resolveUserIdToUUID(verif.userId, verif.userEmail, verif.userName);
+    const targetUserId = await resolveUserIdToUUID(verif.userId, verif.userEmail);
     if (targetUserId) {
-      const { error: upsertErr } = await supabaseAdmin.from('freelancer_verifications').upsert({
+      await supabaseAdmin.from('freelancer_verifications').upsert({
         user_id: targetUserId,
         status: verif.status || 'pending',
         id_document_url: verif.idDocumentUrl || null,
@@ -701,15 +666,11 @@ const syncVerificationToSupabase = async (verif: any) => {
         portfolio_files: Array.isArray(verif.portfolioFiles) ? verif.portfolioFiles : [],
         certificates: Array.isArray(verif.certificates) ? verif.certificates : [],
         external_links: Array.isArray(verif.externalLinks) ? verif.externalLinks : [],
-        skill_tags: Array.isArray(verif.skillTags) ? verif.skillTags : (Array.isArray(verif.specialties) ? verif.specialties : []),
+        skill_tags: Array.isArray(verif.skillTags) ? verif.skillTags : [],
         pitch_statement: verif.pitchStatement || '',
         admin_comment: verif.adminComment || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' });
-
-      if (upsertErr) {
-        console.warn('Supabase verification sync error:', upsertErr.message);
-      }
     }
   } catch (err) {
     console.warn('Supabase verification sync note:', err);
@@ -1448,149 +1409,93 @@ router.post('/contracts/:orderId/messages', async (req, res) => {
 
 router.get('/verifications', async (_req, res) => {
   store = loadStore();
-  const verifMap = new Map<string, any>();
+  const verifs = [...(store.verifications || [])];
 
-  // 1. Seed from in-memory / local disk store
-  for (const v of store.verifications || []) {
-    const key = String(v.userId || v.id).trim();
-    if (key) verifMap.set(key, v);
-  }
-
-  // 2. Fetch directly from Supabase database to guarantee cross-user & serverless visibility
   try {
-    const { data: dbVerifs } = await supabaseAdmin.from('freelancer_verifications').select('*');
-    const { data: profileList } = await supabaseAdmin.from('profiles').select('*');
-    const { data: authUserList } = await supabaseAdmin.auth.admin.listUsers();
-
+    const { data: dbVerifs } = await supabaseAdmin.from('freelancer_verifications').select('*, profiles(id, full_name, email, professional_title, avatar_url)');
     if (dbVerifs && Array.isArray(dbVerifs)) {
       for (const dv of dbVerifs) {
-        const matchingProfile = (profileList || []).find((p: any) => p.id === dv.user_id);
-        const matchingAuthUser = (authUserList?.users || []).find((u: any) => u.id === dv.user_id);
-
-        const userName = matchingProfile?.full_name || matchingAuthUser?.user_metadata?.full_name || 'Applicant';
-        const userEmail = matchingProfile?.email || matchingAuthUser?.email || 'applicant@example.com';
-        const professionalTitle = matchingProfile?.professional_title || matchingAuthUser?.user_metadata?.professional_title || 'Software Engineer';
-        const selfieUrl = dv.selfie_url || matchingProfile?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${dv.user_id}`;
-
+        const matchingIdx = verifs.findIndex((v) => v.userId === dv.user_id || v.id === dv.id);
         const mapped = {
-          id: dv.id || `verif-${dv.user_id}`,
+          id: dv.id,
           userId: dv.user_id,
-          userName,
-          userEmail,
-          professionalTitle,
+          userName: dv.profiles?.full_name || 'Applicant',
+          userEmail: dv.profiles?.email || 'applicant@example.com',
+          professionalTitle: dv.profiles?.professional_title || 'Software Engineer',
           status: dv.status || 'pending',
-          idDocumentUrl: dv.id_document_url || 'https://documents.freelancestack.dev/verif/doc.pdf',
-          selfieUrl,
-          portfolioFiles: Array.isArray(dv.portfolio_files) ? dv.portfolio_files : [],
-          certificates: Array.isArray(dv.certificates) ? dv.certificates : [],
-          externalLinks: Array.isArray(dv.external_links) ? dv.external_links : [],
-          skillTags: Array.isArray(dv.skill_tags) ? dv.skill_tags : [],
+          idDocumentUrl: dv.id_document_url,
+          selfieUrl: dv.selfie_url,
+          portfolioFiles: dv.portfolio_files || [],
+          certificates: dv.certificates || [],
+          externalLinks: dv.external_links || [],
+          skillTags: dv.skill_tags || [],
           pitchStatement: dv.pitch_statement || '',
           adminComment: dv.admin_comment || '',
           submittedAt: dv.created_at || dv.updated_at || new Date().toISOString(),
         };
-
-        const key = String(dv.user_id || dv.id).trim();
-        verifMap.set(key, mapped);
-      }
-    }
-
-    // Also include any registered freelancers from profiles table so all registered freelancers appear in Admin queue
-    if (profileList && Array.isArray(profileList)) {
-      for (const p of profileList) {
-        if (p.role === 'freelancer' && p.id) {
-          const key = String(p.id).trim();
-          if (!verifMap.has(key)) {
-            const matchingAuthUser = (authUserList?.users || []).find((u: any) => u.id === p.id);
-            const userName = p.full_name || matchingAuthUser?.user_metadata?.full_name || p.email?.split('@')[0] || 'Freelancer';
-            const userEmail = p.email || matchingAuthUser?.email || 'applicant@example.com';
-            const professionalTitle = p.professional_title || matchingAuthUser?.user_metadata?.professional_title || 'Freelance Specialist';
-            const selfieUrl = p.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.id}`;
-
-            verifMap.set(key, {
-              id: `verif-${p.id}`,
-              userId: p.id,
-              userName,
-              userEmail,
-              professionalTitle,
-              status: p.is_verified ? 'approved' : 'pending',
-              idDocumentUrl: 'https://documents.freelancestack.dev/verif/passport-scan-encrypted.pdf',
-              selfieUrl,
-              portfolioFiles: ['https://github.com/freelancestack/demo-showcase'],
-              certificates: ['https://certificates.coursera.org/verified-meta-fullstack.pdf'],
-              externalLinks: ['https://linkedin.com/in/freelancer-pro'],
-              skillTags: ['React / Next.js', 'TypeScript', 'Supabase & PostgreSQL'],
-              pitchStatement: p.bio || `Seasoned full-stack freelancer registered on FreelanceStack. Ready for client engagements.`,
-              adminComment: '',
-              submittedAt: p.created_at || p.updated_at || new Date().toISOString(),
-            });
-          }
+        if (matchingIdx >= 0) {
+          verifs[matchingIdx] = { ...verifs[matchingIdx], ...mapped };
+        } else {
+          verifs.unshift(mapped);
         }
       }
     }
-  } catch (err) {
-    console.warn('DB verifications fetch note:', err);
-  }
+  } catch {}
 
-  const verifs = Array.from(verifMap.values());
   verifs.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
   return res.json({ ok: true, verifications: verifs });
 });
 
 router.post('/verifications', async (req, res) => {
   store = loadStore();
-  const body = req.body || {};
+  const parsed = verificationSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, message: 'Invalid verification payload', errors: parsed.error.flatten() });
+  }
 
   const newVerif = {
-    id: body.id || `verif-${Date.now()}`,
-    userId: body.userId || `user-${Date.now()}`,
-    userName: body.userName || 'Applicant',
-    userEmail: (body.userEmail || 'applicant@example.com').trim().toLowerCase(),
-    professionalTitle: body.professionalTitle || 'Software Engineer',
-    yearsExperience: body.yearsExperience ? String(body.yearsExperience) : '3',
-    status: body.status || 'pending',
-    idType: body.idType || 'passport',
-    idNumber: body.idNumber || '',
-    portfolioUrl: body.portfolioUrl || '',
-    specialties: Array.isArray(body.specialties) ? body.specialties : [],
-    idDocumentUrl: body.idDocumentUrl || 'https://documents.freelancestack.dev/verif/doc.pdf',
-    selfieUrl: body.selfieUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=verified',
-    portfolioFiles: Array.isArray(body.portfolioFiles) ? body.portfolioFiles : [],
-    certificates: Array.isArray(body.certificates) ? body.certificates : [],
-    externalLinks: Array.isArray(body.externalLinks) ? body.externalLinks : [],
-    skillTags: Array.isArray(body.skillTags) ? body.skillTags : (Array.isArray(body.specialties) ? body.specialties : []),
-    pitchStatement: body.pitchStatement || '',
-    adminComment: body.adminComment || '',
-    submittedAt: body.submittedAt || new Date().toISOString(),
+    id: parsed.data.id || `verif-${Date.now()}`,
+    userId: parsed.data.userId || `user-${Date.now()}`,
+    userName: parsed.data.userName || 'Applicant',
+    userEmail: parsed.data.userEmail || 'applicant@example.com',
+    professionalTitle: parsed.data.professionalTitle || 'Software Engineer',
+    yearsExperience: parsed.data.yearsExperience ? String(parsed.data.yearsExperience) : '3',
+    status: parsed.data.status || 'pending',
+    idType: parsed.data.idType || 'passport',
+    idNumber: parsed.data.idNumber || '',
+    portfolioUrl: parsed.data.portfolioUrl || '',
+    specialties: parsed.data.specialties || [],
+    idDocumentUrl: parsed.data.idDocumentUrl || 'https://documents.freelancestack.dev/verif/doc.pdf',
+    selfieUrl: parsed.data.selfieUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=verified',
+    portfolioFiles: parsed.data.portfolioFiles || [],
+    certificates: parsed.data.certificates || [],
+    externalLinks: parsed.data.externalLinks || [],
+    skillTags: parsed.data.skillTags || (parsed.data.specialties || []),
+    pitchStatement: parsed.data.pitchStatement || '',
+    submittedAt: new Date().toISOString(),
   };
 
   if (!Array.isArray(store.verifications)) {
     store.verifications = [];
   }
 
-  const existingIdx = store.verifications.findIndex(
-    (v) =>
-      String(v.id).trim() === String(newVerif.id).trim() ||
-      String(v.userId).trim() === String(newVerif.userId).trim() ||
-      (v.userEmail && v.userEmail.toLowerCase() === newVerif.userEmail.toLowerCase())
-  );
-
+  const existingIdx = store.verifications.findIndex((v) => v.id === newVerif.id || v.userId === newVerif.userId);
   if (existingIdx >= 0) {
-    store.verifications[existingIdx] = { ...store.verifications[existingIdx], ...newVerif };
+    store.verifications[existingIdx] = newVerif;
   } else {
     store.verifications.unshift(newVerif);
   }
 
   saveStore(store);
-  await syncVerificationToSupabase(newVerif);
+  syncVerificationToSupabase(newVerif);
 
   return res.status(201).json({ ok: true, submission: newVerif, verification: newVerif });
 });
 
 router.patch('/verifications/:id/decision', async (req, res) => {
   store = loadStore();
-  const { status, adminComment, reviewNotes } = req.body || {};
-  const targetId = String(req.params.id).trim();
+  const { status, adminComment, reviewNotes } = req.body;
 
   if (!status || !['approved', 'rejected', 'under_review'].includes(status)) {
     return res.status(400).json({ ok: false, message: 'Invalid status' });
@@ -1600,33 +1505,9 @@ router.patch('/verifications/:id/decision', async (req, res) => {
     store.verifications = [];
   }
 
-  let verif = store.verifications.find(
-    (v) => String(v.id).trim() === targetId || String(v.userId || '').trim() === targetId
+  const verif = store.verifications.find(
+    (v) => String(v.id).trim() === String(req.params.id).trim() || String(v.userId || '').trim() === String(req.params.id).trim()
   );
-
-  if (!verif) {
-    try {
-      const { data } = await supabaseAdmin
-        .from('freelancer_verifications')
-        .select('*')
-        .or(`id.eq.${targetId},user_id.eq.${targetId}`)
-        .maybeSingle();
-      if (data) {
-        verif = {
-          id: data.id,
-          userId: data.user_id,
-          userName: 'Applicant',
-          userEmail: 'applicant@example.com',
-          status: data.status,
-          idDocumentUrl: data.id_document_url,
-          selfieUrl: data.selfie_url,
-          submittedAt: data.created_at || new Date().toISOString(),
-        };
-        store.verifications.unshift(verif);
-      }
-    } catch {}
-  }
-
   if (verif) {
     verif.status = status;
     verif.adminComment = adminComment || reviewNotes || '';
@@ -1634,30 +1515,14 @@ router.patch('/verifications/:id/decision', async (req, res) => {
 
     if (status === 'approved' && Array.isArray(store.bids)) {
       store.bids.forEach((b: any) => {
-        if (
-          b.freelancerId === verif.userId ||
-          (b.freelancerEmail && b.freelancerEmail.toLowerCase() === verif.userEmail?.toLowerCase())
-        ) {
+        if (b.freelancerId === verif.userId || (b.freelancerEmail && b.freelancerEmail.toLowerCase() === verif.userEmail?.toLowerCase())) {
           b.freelancerVerified = true;
         }
       });
     }
 
     saveStore(store);
-    await syncVerificationToSupabase(verif);
-
-    try {
-      const targetUserId = await resolveUserIdToUUID(verif.userId, verif.userEmail, verif.userName);
-      if (targetUserId) {
-        await supabaseAdmin
-          .from('profiles')
-          .update({
-            is_verified: status === 'approved',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', targetUserId);
-      }
-    } catch {}
+    syncVerificationToSupabase(verif);
 
     return res.json({
       ok: true,
