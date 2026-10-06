@@ -15,6 +15,8 @@ import {
   AlertCircle,
   Lock,
   Edit3,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 type StepKey = 'basic' | 'identity' | 'skills' | 'pitch' | 'review';
@@ -626,26 +628,106 @@ export const VerificationWizard: React.FC = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  PASSPORT / DRIVER LICENSE DOCUMENT URL
+                  PASSPORT / DRIVER LICENSE DOCUMENT PROOF
                 </label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+                  <label
+                    className="btn-secondary"
+                    style={{
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 14px',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    <Upload size={15} />
+                    <span>Upload ID Photo / Document</span>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            if (typeof ev.target?.result === 'string') {
+                              setFormData((prev) => ({ ...prev, idDocumentUrl: ev.target!.result as string }));
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {formData.idDocumentUrl && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={14} /> Document attached
+                    </span>
+                  )}
+                </div>
                 <input
-                  type="url"
+                  type="text"
                   value={formData.idDocumentUrl}
                   onChange={(e) => setFormData({ ...formData, idDocumentUrl: e.target.value })}
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                  placeholder="Or paste document image / cloud URL"
                   required
                 />
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  VERIFIED PROFILE PHOTO / LIVE SELFIE URL
+                  VERIFIED PROFILE PHOTO / LIVE SELFIE
                 </label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+                  <label
+                    className="btn-secondary"
+                    style={{
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 14px',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    <ImageIcon size={15} />
+                    <span>Upload Selfie Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            if (typeof ev.target?.result === 'string') {
+                              setFormData((prev) => ({ ...prev, selfieUrl: ev.target!.result as string }));
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {formData.selfieUrl && (
+                    <img
+                      src={formData.selfieUrl}
+                      alt="Selfie Preview"
+                      style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--accent-primary)' }}
+                    />
+                  )}
+                </div>
                 <input
-                  type="url"
+                  type="text"
                   value={formData.selfieUrl}
                   onChange={(e) => setFormData({ ...formData, selfieUrl: e.target.value })}
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                  placeholder="Or paste photo URL"
                   required
                 />
               </div>
@@ -660,7 +742,7 @@ export const VerificationWizard: React.FC = () => {
                   PORTFOLIO / GITHUB SHOWCASE URL
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={formData.portfolioFiles[0] || ''}
                   onChange={(e) => setFormData({ ...formData, portfolioFiles: [e.target.value] })}
                   style={{ width: '100%' }}
@@ -671,14 +753,52 @@ export const VerificationWizard: React.FC = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  CERTIFICATE OR ACCREDITATION LINK (OPTIONAL)
+                  CERTIFICATE OR ACCREDITATION (FILE OR LINK)
                 </label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+                  <label
+                    className="btn-secondary"
+                    style={{
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 14px',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    <Upload size={15} />
+                    <span>Upload Certificate File</span>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            if (typeof ev.target?.result === 'string') {
+                              setFormData((prev) => ({ ...prev, certificates: [ev.target!.result as string] }));
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {formData.certificates[0] && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Award size={14} /> Certificate attached
+                    </span>
+                  )}
+                </div>
                 <input
-                  type="url"
+                  type="text"
                   value={formData.certificates[0] || ''}
                   onChange={(e) => setFormData({ ...formData, certificates: [e.target.value] })}
-                  style={{ width: '100%' }}
-                  placeholder="https://certificates.coursera.org/..."
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                  placeholder="https://certificates.coursera.org/... or uploaded certificate data"
                 />
               </div>
 
@@ -687,7 +807,7 @@ export const VerificationWizard: React.FC = () => {
                   LINKEDIN OR SOCIAL PROOF PROFILE
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={formData.externalLinks[0] || ''}
                   onChange={(e) => setFormData({ ...formData, externalLinks: [e.target.value] })}
                   style={{ width: '100%' }}

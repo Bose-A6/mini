@@ -25,6 +25,7 @@ export const GigDetailModal: React.FC = () => {
     setSelectedContractId,
     setActiveView,
     getCollaborationBetween,
+    getFreelancerRating,
     addToast,
   } = useApp();
 
@@ -47,6 +48,7 @@ export const GigDetailModal: React.FC = () => {
   const [deliveryDays, setDeliveryDays] = useState<number>(14);
   const [coverMessage, setCoverMessage] = useState<string>('');
   const [isGeneratingAi, setIsGeneratingAi] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Sync state whenever selectedGigId changes
   React.useEffect(() => {
@@ -81,6 +83,8 @@ export const GigDetailModal: React.FC = () => {
 
   const handleApply = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (isFreelancer && !isVerifiedFreelancer) {
       addToast('warning', 'Verification Required', 'You must be approved by the Administrator before submitting proposals.');
       return;
@@ -90,8 +94,11 @@ export const GigDetailModal: React.FC = () => {
       return;
     }
 
+    setIsSubmitting(true);
     submitBid(gig.id, proposedPrice, deliveryDays, coverMessage, gig.suggestedMilestones);
+    setCoverMessage('');
     setActiveTab('proposals');
+    setTimeout(() => setIsSubmitting(false), 800);
   };
 
   const handleHireFromModal = (bidId: string) => {
@@ -411,9 +418,16 @@ export const GigDetailModal: React.FC = () => {
                               </span>
                             )}
                           </strong>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            {b.freelancerTitle} • {b.freelancerRating} ★ ({b.freelancerCompletedOrders} completed)
-                          </span>
+                          {(() => {
+                            const stats = getFreelancerRating(b.freelancerId);
+                            const ratingVal = stats.hasClientReviews ? stats.averageRating : (b.freelancerRating ?? 5.0);
+                            const countVal = stats.hasClientReviews ? stats.reviewsCount : (b.freelancerCompletedOrders ?? 0);
+                            return (
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                {b.freelancerTitle} • <strong style={{ color: 'var(--accent-amber)' }}>★ {ratingVal}</strong> ({countVal} {countVal === 1 ? 'review' : 'reviews'})
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -623,11 +637,17 @@ export const GigDetailModal: React.FC = () => {
 
             {/* Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button type="button" className="btn-secondary" onClick={() => setActiveTab('overview')}>
+              <button type="button" className="btn-secondary" onClick={() => setActiveTab('overview')} disabled={isSubmitting}>
                 Cancel
               </button>
-              <button type="submit" className="btn-primary">
-                <Send size={16} /> Send Proposal Request to Client
+              <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <span>Submitting Proposal...</span>
+                ) : (
+                  <>
+                    <Send size={16} /> Send Proposal Request to Client
+                  </>
+                )}
               </button>
             </div>
           </form>

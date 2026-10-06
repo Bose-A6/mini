@@ -28,9 +28,8 @@ import {
   Megaphone,
   PenTool,
 } from 'lucide-react';
-import { GigDetailModal } from '../Marketplace/GigDetailModal';
 import { VerificationWizard } from '../Verification/VerificationWizard';
-import type { Milestone } from '../../types';
+import type { Milestone, Bid } from '../../types';
 import {
   FreelancerPaymentModal,
   PaymentProofLightbox,
@@ -49,12 +48,12 @@ export const FreelancerDashboard: React.FC = () => {
     confirmMilestonePayment,
     setActiveView,
     setSelectedGigId,
-    selectedGigId,
     setSelectedContractId,
     openSupportModal,
     openInvoiceModal,
     getRepeatClientsForFreelancer,
     getCollaborationBetween,
+    getFreelancerRating,
     setIsAuthModalOpen,
     setAuthMode,
     isSyncingGigs,
@@ -92,10 +91,23 @@ export const FreelancerDashboard: React.FC = () => {
   const [liveUrl, setLiveUrl] = useState<string>('');
   const [fileUrl, setFileUrl] = useState<string>('');
 
-  // Freelancer's items - strictly belonging to this authenticated freelancer
+  // Freelancer's items - strictly belonging to this authenticated freelancer (1x proposal per gig guaranteed)
   const myBids = useMemo(() => {
     if (!currentUser) return [];
-    return (bids || []).filter((b) => String(b.freelancerId).trim() === String(currentUser.id).trim());
+    const uniqueMap = new Map<string, Bid>();
+    (bids || []).forEach((b) => {
+      const isMine =
+        String(b.freelancerId).trim() === String(currentUser.id).trim() ||
+        (currentUser.email && (b as any).freelancerEmail && (b as any).freelancerEmail.toLowerCase() === currentUser.email.toLowerCase()) ||
+        (currentUser.fullName && b.freelancerName && b.freelancerName.toLowerCase().trim() === currentUser.fullName.toLowerCase().trim());
+      if (isMine) {
+        const key = String(b.gigId || (b as any).gig_id || '').trim();
+        if (key && !uniqueMap.has(key)) {
+          uniqueMap.set(key, b);
+        }
+      }
+    });
+    return Array.from(uniqueMap.values());
   }, [bids, currentUser]);
 
   const myContracts = useMemo(() => {
@@ -131,40 +143,49 @@ export const FreelancerDashboard: React.FC = () => {
 
   const openClientGigs = useMemo(() => {
     const targetCat = categories.find((c) => c.id === selectedCategory);
-    return (gigs || [])
-      .filter((gig) => {
-        const gigStatus = gig.status || 'open';
-        const matchesStatus = gigStatus === 'open';
-        const matchesCategory =
-          selectedCategory === 'all' ||
-          gig.categoryId === selectedCategory ||
-          (targetCat && (gig.categoryId === targetCat.slug || gig.categoryName?.toLowerCase().includes(targetCat.name.toLowerCase())));
-        const matchesSearch =
-          searchQuery === '' ||
-          gig.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          gig.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (gig.tags || []).some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
-        const bMin = Number(gig.budgetMin ?? (gig as any).budget_min ?? 0);
-        const matchesBudget = maxBudgetFilter >= 15000 || bMin <= maxBudgetFilter;
+    const uniqueMap = new Map<string, typeof gigs[0]>();
 
-        return matchesCategory && matchesSearch && matchesBudget && matchesStatus;
-      })
-      .sort((a, b) => {
-        const dateA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
-        const dateB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
-        if (sortBy === 'newest') {
-          return dateB - dateA;
+    (gigs || []).forEach((gig) => {
+      const gigStatus = gig.status || 'open';
+      const matchesStatus = gigStatus === 'open';
+      const matchesCategory =
+        selectedCategory === 'all' ||
+        gig.categoryId === selectedCategory ||
+        (targetCat && (gig.categoryId === targetCat.slug || gig.categoryName?.toLowerCase().includes(targetCat.name.toLowerCase())));
+      const matchesSearch =
+        searchQuery === '' ||
+        gig.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        gig.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (gig.tags || []).some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      const bMin = Number(gig.budgetMin ?? (gig as any).budget_min ?? 0);
+      const matchesBudget = maxBudgetFilter >= 15000 || bMin <= maxBudgetFilter;
+
+      if (matchesCategory && matchesSearch && matchesBudget && matchesStatus) {
+        const cleanTitle = String(gig.title || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanClientId = String(gig.clientId || '').trim().toLowerCase();
+        const key = cleanTitle ? `${cleanTitle}__${cleanClientId}` : String(gig.id).trim();
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, gig);
         }
-        if (sortBy === 'budget_high') {
-          const maxA = Number(a.budgetMax ?? (a as any).budget_max ?? 0);
-          const maxB = Number(b.budgetMax ?? (b as any).budget_max ?? 0);
-          return maxB - maxA;
-        }
-        if (sortBy === 'proposals') {
-          return (a.proposalsCount || 0) - (b.proposalsCount || 0);
-        }
-        return 0;
-      });
+      }
+    });
+
+    return Array.from(uniqueMap.values()).sort((a, b) => {
+      const dateA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
+      const dateB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
+      if (sortBy === 'newest') {
+        return dateB - dateA;
+      }
+      if (sortBy === 'budget_high') {
+        const maxA = Number(a.budgetMax ?? (a as any).budget_max ?? 0);
+        const maxB = Number(b.budgetMax ?? (b as any).budget_max ?? 0);
+        return maxB - maxA;
+      }
+      if (sortBy === 'proposals') {
+        return (a.proposalsCount || 0) - (b.proposalsCount || 0);
+      }
+      return 0;
+    });
   }, [gigs, selectedCategory, categories, searchQuery, maxBudgetFilter, sortBy]);
 
   const totalInEscrow = myContracts
@@ -317,9 +338,15 @@ export const FreelancerDashboard: React.FC = () => {
               )}
             </div>
             <h2>{currentUser?.fullName || 'Freelancer Studio'}</h2>
-            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              {currentUser?.professionalTitle || 'Freelance Profile'} • {currentUser?.rating ?? 5.0} ★ ({currentUser?.completedProjects !== undefined ? Math.max(currentUser.completedProjects, myCompletedContracts.length) : myCompletedContracts.length} projects completed)
-            </p>
+            {(() => {
+              const stats = getFreelancerRating(currentUser?.id || 'freelancer-1');
+              const compCount = Math.max(currentUser?.completedProjects !== undefined ? currentUser.completedProjects : myCompletedContracts.length, myCompletedContracts.length);
+              return (
+                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  {currentUser?.professionalTitle || 'Specialist Profile'} • <strong style={{ color: 'var(--accent-amber)' }}>★ {stats.averageRating} / 5.0</strong> ({stats.reviewsCount} {stats.reviewsCount === 1 ? 'client review' : 'client reviews'} · Arithmetic Average) • {compCount} completed projects
+                </p>
+              );
+            })()}
           </div>
         </div>
 
@@ -532,6 +559,26 @@ export const FreelancerDashboard: React.FC = () => {
             ${myCompletedContracts.reduce((sum, c) => sum + (c.amount || 0), 0).toLocaleString()} Disbursed
           </span>
         </div>
+
+        {(() => {
+          const stats = getFreelancerRating(currentUser?.id || 'freelancer-1');
+          return (
+            <div className="glass-panel" style={{ padding: '20px' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                Client Rating Average
+              </span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '6px' }}>
+                <strong style={{ fontSize: '1.8rem', color: 'var(--accent-amber)' }}>
+                  ★ {stats.averageRating}
+                </strong>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>/ 5.0</span>
+              </div>
+              <span style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: '4px', display: 'block' }}>
+                {stats.reviewsCount} {stats.reviewsCount === 1 ? 'Client Review' : 'Client Reviews'} (Arithmetic Mean)
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Navigation Tabs */}
@@ -919,10 +966,10 @@ export const FreelancerDashboard: React.FC = () => {
                             PROPOSED MILESTONES:
                           </span>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {bid.milestones.map((m, idx) => (
+                            {bid.milestones.map((m: any, idx: number) => (
                               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', padding: '4px 8px', borderRadius: 4, background: 'rgba(255, 255, 255, 0.02)' }}>
                                 <span style={{ color: 'var(--text-secondary)' }}>{idx + 1}. {m.title}</span>
-                                <strong style={{ color: 'var(--accent-emerald)' }}>${m.amount.toLocaleString()}</strong>
+                                <strong style={{ color: 'var(--accent-emerald)' }}>${Number(m.amount || 0).toLocaleString()}</strong>
                               </div>
                             ))}
                           </div>
@@ -1573,9 +1620,6 @@ export const FreelancerDashboard: React.FC = () => {
           onClose={() => setProofLightboxMilestone(null)}
         />
       )}
-
-      {/* Modal Detail View */}
-      {selectedGigId && <GigDetailModal />}
     </div>
   );
 };

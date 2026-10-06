@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type {
   Persona,
   Category,
@@ -26,6 +26,22 @@ import { mockGigs, mockBids, mockCategories, mockVerifications } from '../data/m
 export type AppView = 'gigs' | 'client' | 'freelancer' | 'contracts' | 'admin' | 'verification' | 'auth' | 'login' | 'signup';
 
 export const standardCategories: Category[] = mockCategories;
+
+export interface FreelancerReviewItem {
+  rating: number;
+  review: string;
+  clientName: string;
+  clientAvatar?: string;
+  gigTitle: string;
+  date: string;
+}
+
+export interface FreelancerRatingStats {
+  averageRating: number;
+  reviewsCount: number;
+  hasClientReviews: boolean;
+  reviews: FreelancerReviewItem[];
+}
 
 export interface AdminStats {
   totalGMV: number;
@@ -76,6 +92,7 @@ interface AppContextType {
   isSyncingGigs: boolean;
   refreshGigs: () => Promise<void>;
   adminStats: AdminStats;
+  getFreelancerRating: (freelancerId: string) => FreelancerRatingStats;
   
   // Real Auth Actions
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -220,6 +237,43 @@ export const normalizeGig = (raw: any): Gig => {
     proposalsCount: Number(raw.proposalsCount ?? raw.bids?.length ?? 0),
     isFeatured: Boolean(raw.isFeatured ?? raw.is_featured ?? false),
     createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
+  };
+};
+
+export const getFreelancerRatingStats = (freelancerId: string, allContracts: OrderContract[]): FreelancerRatingStats => {
+  const cleanId = String(freelancerId || '').trim();
+  const rated = (allContracts || []).filter(
+    (c) =>
+      (String(c.freelancerId).trim() === cleanId || (c.freelancerName && cleanId.includes(c.freelancerName.toLowerCase()))) &&
+      c.status === 'completed' &&
+      typeof c.clientRating === 'number' &&
+      c.clientRating > 0
+  );
+
+  if (rated.length === 0) {
+    return {
+      averageRating: 5.0,
+      reviewsCount: 0,
+      hasClientReviews: false,
+      reviews: [],
+    };
+  }
+
+  const sum = rated.reduce((acc, c) => acc + Number(c.clientRating), 0);
+  const averageRating = Math.round((sum / rated.length) * 10) / 10;
+
+  return {
+    averageRating,
+    reviewsCount: rated.length,
+    hasClientReviews: true,
+    reviews: rated.map((c) => ({
+      rating: Number(c.clientRating) || 5,
+      review: c.clientReview || 'Verified project completion with full escrow release.',
+      clientName: c.clientName || 'Enterprise Client',
+      clientAvatar: c.clientAvatar,
+      gigTitle: c.gigTitle,
+      date: c.completedAt || c.createdAt,
+    })),
   };
 };
 
@@ -493,205 +547,202 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => safeParse(STORAGE_KEYS.NOTIFICATIONS, []));
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
+  const isFetchingRef = useRef<boolean>(false);
+
   // Fetch gigs, bids, contracts, messages, and verifications from backend API and sync with state
   const fetchGigsFromBackend = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       
-      // 1. Fetch Contracts
-      let fetchedBackendContracts: OrderContract[] = [];
-      try {
-        const contractsRes = await fetch(`${apiUrl}/api/marketplace/contracts`);
-        if (contractsRes.ok) {
-          const contractsData = await contractsRes.json();
-          if (contractsData && Array.isArray(contractsData.contracts)) {
-            fetchedBackendContracts = contractsData.contracts.map(normalizeContract);
-            setContracts((prev) => {
-              const contractMap = new Map<string, OrderContract>();
-              for (const c of prev || []) {
-                contractMap.set(String(c.id).trim(), c);
-              }
-              for (const bc of fetchedBackendContracts) {
-                contractMap.set(String(bc.id).trim(), bc);
-              }
-              const combined = Array.from(contractMap.values());
-              combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-              try {
-                localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(combined));
-              } catch {}
-              return combined;
-            });
+      const [contractsRes, gigsRes, bidsRes, messagesRes, verifsRes, ticketsRes] = await Promise.allSettled([
+        fetch(`${apiUrl}/api/marketplace/contracts`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${apiUrl}/api/marketplace/gigs`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${apiUrl}/api/marketplace/bids`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${apiUrl}/api/marketplace/messages`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${apiUrl}/api/marketplace/verifications`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${apiUrl}/api/marketplace/tickets`).then((r) => (r.ok ? r.json() : null)),
+      ]);
+
+      // 1. Process Contracts
+      let completedContractGigIds = new Set<string>();
+      if (contractsRes.status === 'fulfilled' && contractsRes.value?.contracts) {
+        const backendContracts: OrderContract[] = contractsRes.value.contracts.map(normalizeContract);
+        completedContractGigIds = new Set(
+          backendContracts
+            .filter((c) => c.status === 'completed' && c.gigId)
+            .map((c) => String(c.gigId).trim())
+        );
+
+        setContracts((prev) => {
+          const contractMap = new Map<string, OrderContract>();
+          for (const c of prev || []) contractMap.set(String(c.id).trim(), c);
+          for (const bc of backendContracts) contractMap.set(String(bc.id).trim(), bc);
+          const combined = Array.from(contractMap.values());
+          combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          try { localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(combined)); } catch {}
+          return combined;
+        });
+      }
+
+      // 2. Process Bids (Strict unique key: gigId + freelancerKey)
+      let backendBidsList: Bid[] = [];
+      if (bidsRes.status === 'fulfilled' && bidsRes.value?.bids) {
+        backendBidsList = bidsRes.value.bids.map(normalizeBid);
+        setBids(() => {
+          const bidMap = new Map<string, Bid>();
+          for (const bb of backendBidsList) {
+            const key = `${String(bb.gigId).trim()}__${String(bb.freelancerId || bb.freelancerName || bb.id).trim()}`;
+            bidMap.set(key, bb);
           }
-        }
-      } catch {}
+          const combined = Array.from(bidMap.values());
+          combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          try { localStorage.setItem(STORAGE_KEYS.BIDS, JSON.stringify(combined)); } catch {}
+          return combined;
+        });
+      }
 
-      const completedContractGigIds = new Set(
-        fetchedBackendContracts
-          .filter((c) => c.status === 'completed' && c.gigId)
-          .map((c) => String(c.gigId).trim())
-      );
+      // 3. Process Gigs with accurate Proposal Count & Strict Canonical Deduplication
+      if (gigsRes.status === 'fulfilled' && gigsRes.value?.gigs) {
+        const backendGigs: Gig[] = gigsRes.value.gigs.map(normalizeGig);
+        setGigs((prev) => {
+          const gigMap = new Map<string, Gig>();
+          const canonicalKeyToIdMap = new Map<string, string>();
 
-      // 2. Fetch Gigs
-      try {
-        const gigsRes = await fetch(`${apiUrl}/api/marketplace/gigs`);
-        if (gigsRes.ok) {
-          const data = await gigsRes.json();
-          if (data && Array.isArray(data.gigs)) {
-            const backendGigs: Gig[] = data.gigs.map(normalizeGig);
-            setGigs((prev) => {
-              const gigMap = new Map<string, Gig>();
-              for (const g of prev || []) {
-                gigMap.set(String(g.id).trim(), g);
-              }
-              for (const bg of backendGigs) {
-                const isGigCompleted = bg.status === 'completed' || completedContractGigIds.has(String(bg.id).trim());
-                gigMap.set(String(bg.id).trim(), isGigCompleted ? { ...bg, status: 'completed' } : bg);
-              }
-              const combined = Array.from(gigMap.values()).map((g) => {
-                if (completedContractGigIds.has(String(g.id).trim())) {
-                  return { ...g, status: 'completed' as const };
-                }
-                return g;
+          const getCanonicalKey = (g: Gig) => {
+            const cleanTitle = String(g.title || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            const cleanClientId = String(g.clientId || '').trim().toLowerCase();
+            return cleanTitle ? `${cleanTitle}__${cleanClientId}` : String(g.id).trim();
+          };
+
+          for (const g of prev || []) {
+            const key = getCanonicalKey(g);
+            gigMap.set(String(g.id).trim(), g);
+            if (key) canonicalKeyToIdMap.set(key, String(g.id).trim());
+          }
+
+          for (const bg of backendGigs) {
+            const isGigCompleted = bg.status === 'completed' || completedContractGigIds.has(String(bg.id).trim());
+            const key = getCanonicalKey(bg);
+            const existingId = canonicalKeyToIdMap.get(key);
+
+            if (existingId && existingId !== String(bg.id).trim()) {
+              gigMap.delete(existingId);
+            }
+
+            const updatedBg = isGigCompleted ? { ...bg, status: 'completed' as const } : bg;
+            gigMap.set(String(bg.id).trim(), updatedBg);
+            if (key) {
+              canonicalKeyToIdMap.set(key, String(bg.id).trim());
+            }
+          }
+
+          // Strict final canonical deduplication pass
+          const finalMap = new Map<string, Gig>();
+          for (const g of gigMap.values()) {
+            const key = getCanonicalKey(g);
+            if (!finalMap.has(key)) {
+              finalMap.set(key, g);
+            } else {
+              // Keep preferred non-default category
+              const existing = finalMap.get(key)!;
+              const preferredCategoryName = (!existing.categoryName || existing.categoryName === 'Full-Stack Architecture') && g.categoryName && g.categoryName !== 'Full-Stack Architecture'
+                ? g.categoryName
+                : existing.categoryName;
+              const preferredCategoryId = (!existing.categoryId || existing.categoryId === 'fullstack') && g.categoryId && g.categoryId !== 'fullstack'
+                ? g.categoryId
+                : existing.categoryId;
+              finalMap.set(key, {
+                ...existing,
+                categoryName: preferredCategoryName,
+                categoryId: preferredCategoryId,
               });
-              combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-              try {
-                localStorage.setItem(STORAGE_KEYS.GIGS, JSON.stringify(combined));
-              } catch {}
-              return combined;
-            });
+            }
           }
-        }
-      } catch {}
 
-      // 3. Fetch Bids / Proposals
-      try {
-        const bidsRes = await fetch(`${apiUrl}/api/marketplace/bids`);
-        if (bidsRes.ok) {
-          const bidsData = await bidsRes.json();
-          if (bidsData && Array.isArray(bidsData.bids)) {
-            const backendBids: Bid[] = bidsData.bids.map(normalizeBid);
-            setBids((prev) => {
-              const bidMap = new Map<string, Bid>();
-              for (const b of prev || []) {
-                bidMap.set(String(b.id).trim(), b);
-              }
-              for (const bb of backendBids) {
-                bidMap.set(String(bb.id).trim(), bb);
-              }
-              const combined = Array.from(bidMap.values());
-              combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-              try {
-                localStorage.setItem(STORAGE_KEYS.BIDS, JSON.stringify(combined));
-              } catch {}
-              return combined;
-            });
-          }
-        }
-      } catch {}
+          const combined = Array.from(finalMap.values()).map((g) => {
+            const matchingBids = backendBidsList.filter((b) => String(b.gigId).trim() === String(g.id).trim());
+            return {
+              ...g,
+              status: completedContractGigIds.has(String(g.id).trim()) ? ('completed' as const) : g.status,
+              proposalsCount: matchingBids.length > 0 ? matchingBids.length : (g.proposalsCount || 0),
+            };
+          });
+          combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          try { localStorage.setItem(STORAGE_KEYS.GIGS, JSON.stringify(combined)); } catch {}
+          return combined;
+        });
+      }
 
-      // 4. Fetch Chat Messages
-      try {
-        const messagesRes = await fetch(`${apiUrl}/api/marketplace/messages`);
-        if (messagesRes.ok) {
-          const messagesData = await messagesRes.json();
-          if (messagesData && Array.isArray(messagesData.messages)) {
-            const backendMessages: ChatMessage[] = messagesData.messages.map(normalizeMessage);
-            setMessages((prev) => {
-              const msgMap = new Map<string, ChatMessage>();
-              for (const m of prev || []) {
-                msgMap.set(String(m.id).trim(), m);
-              }
-              for (const bm of backendMessages) {
-                msgMap.set(String(bm.id).trim(), bm);
-              }
-              const combined = Array.from(msgMap.values());
-              combined.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-              try {
-                localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(combined));
-              } catch {}
-              return combined;
-            });
-          }
-        }
-      } catch {}
+      // 4. Process Messages
+      if (messagesRes.status === 'fulfilled' && messagesRes.value?.messages) {
+        const backendMessages: ChatMessage[] = messagesRes.value.messages.map(normalizeMessage);
+        setMessages((prev) => {
+          const msgMap = new Map<string, ChatMessage>();
+          for (const m of prev || []) msgMap.set(String(m.id).trim(), m);
+          for (const bm of backendMessages) msgMap.set(String(bm.id).trim(), bm);
+          const combined = Array.from(msgMap.values());
+          combined.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          try { localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(combined)); } catch {}
+          return combined;
+        });
+      }
 
-      // 5. Fetch Verifications
-      try {
-        const verifsRes = await fetch(`${apiUrl}/api/marketplace/verifications`);
-        if (verifsRes.ok) {
-          const verifsData = await verifsRes.json();
-          if (verifsData && Array.isArray(verifsData.verifications)) {
-            const backendVerifs: VerificationSubmission[] = verifsData.verifications.map(normalizeVerification);
-            setVerifications((prev) => {
-              const verifMap = new Map<string, VerificationSubmission>();
-              for (const v of prev || []) {
-                verifMap.set(String(v.id).trim(), v);
-              }
-              for (const bv of backendVerifs) {
-                verifMap.set(String(bv.id).trim(), bv);
-              }
-              const combined = Array.from(verifMap.values());
-              combined.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-              try {
-                localStorage.setItem(STORAGE_KEYS.VERIFICATIONS, JSON.stringify(combined));
-              } catch {}
+      // 5. Process Verifications
+      if (verifsRes.status === 'fulfilled' && verifsRes.value?.verifications) {
+        const backendVerifs: VerificationSubmission[] = verifsRes.value.verifications.map(normalizeVerification);
+        setVerifications((prev) => {
+          const verifMap = new Map<string, VerificationSubmission>();
+          for (const v of prev || []) verifMap.set(String(v.id).trim(), v);
+          for (const bv of backendVerifs) verifMap.set(String(bv.id).trim(), bv);
+          const combined = Array.from(verifMap.values());
+          combined.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+          try { localStorage.setItem(STORAGE_KEYS.VERIFICATIONS, JSON.stringify(combined)); } catch {}
 
-              // Sync logged-in freelancer verified status with their verification record
-              setCurrentUser((curr) => {
-                if (!curr || curr.role !== 'freelancer') return curr;
-                const myVerif = combined.find(
-                  (v) => v.userId === curr.id || (v.userEmail && v.userEmail.toLowerCase() === curr.email?.toLowerCase())
-                );
-                const isApproved = myVerif?.status === 'approved';
-                if (curr.isVerified !== isApproved) {
-                  return { ...curr, isVerified: isApproved };
-                }
-                return curr;
-              });
+          setCurrentUser((curr) => {
+            if (!curr || curr.role !== 'freelancer') return curr;
+            const myVerif = combined.find(
+              (v) => v.userId === curr.id || (v.userEmail && v.userEmail.toLowerCase() === curr.email?.toLowerCase())
+            );
+            const isApproved = myVerif?.status === 'approved';
+            if (curr.isVerified !== isApproved) {
+              return { ...curr, isVerified: isApproved };
+            }
+            return curr;
+          });
 
-              return combined;
-            });
-          }
-        }
-      } catch {}
+          return combined;
+        });
+      }
 
-      // 6. Fetch Support Tickets
-      try {
-        const ticketsRes = await fetch(`${apiUrl}/api/marketplace/tickets`);
-        if (ticketsRes.ok) {
-          const ticketsData = await ticketsRes.json();
-          if (ticketsData && Array.isArray(ticketsData.tickets)) {
-            const backendTickets: SupportTicket[] = ticketsData.tickets.map(normalizeTicket);
-            setTickets((prev) => {
-              const ticketMap = new Map<string, SupportTicket>();
-              for (const t of prev || []) {
-                ticketMap.set(String(t.id).trim(), t);
-              }
-              for (const bt of backendTickets) {
-                ticketMap.set(String(bt.id).trim(), bt);
-              }
-              const combined = Array.from(ticketMap.values());
-              combined.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
-              try {
-                localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(combined));
-              } catch {}
-              return combined;
-            });
-          }
-        }
-      } catch {}
-
+      // 6. Process Tickets
+      if (ticketsRes.status === 'fulfilled' && ticketsRes.value?.tickets) {
+        const backendTickets: SupportTicket[] = ticketsRes.value.tickets.map(normalizeTicket);
+        setTickets((prev) => {
+          const ticketMap = new Map<string, SupportTicket>();
+          for (const t of prev || []) ticketMap.set(String(t.id).trim(), t);
+          for (const bt of backendTickets) ticketMap.set(String(bt.id).trim(), bt);
+          const combined = Array.from(ticketMap.values());
+          combined.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+          try { localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(combined)); } catch {}
+          return combined;
+        });
+      }
     } catch (err) {
       console.warn('Sync background fetch notice:', err);
+    } finally {
+      isFetchingRef.current = false;
     }
   }, []);
 
-  // Background polling & auto-fetch on mount and view changes
+  // Background polling: lightweight 15s interval and on view change
   useEffect(() => {
     fetchGigsFromBackend();
     const interval = setInterval(() => {
       fetchGigsFromBackend();
-    }, 2500);
+    }, 15000);
     return () => clearInterval(interval);
   }, [fetchGigsFromBackend]);
 
@@ -703,7 +754,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshGigs = useCallback(async () => {
     setIsSyncingGigs(true);
     await fetchGigsFromBackend();
-    setTimeout(() => setIsSyncingGigs(false), 400);
+    setTimeout(() => setIsSyncingGigs(false), 300);
   }, [fetchGigsFromBackend]);
 
   // Compute dynamic category counts flexibly matching id, slug, or name
@@ -1246,7 +1297,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setGigs((prev) => {
-      const filtered = (prev || []).filter((g) => g.id !== gigId);
+      const getCanonicalKey = (g: Gig) => {
+        const cleanTitle = String(g.title || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanClientId = String(g.clientId || '').trim().toLowerCase();
+        return cleanTitle ? `${cleanTitle}__${cleanClientId}` : String(g.id).trim();
+      };
+      const newKey = getCanonicalKey(newGig);
+      const filtered = (prev || []).filter((g) => g.id !== gigId && getCanonicalKey(g) !== newKey);
       const updated = [newGig, ...filtered];
       try {
         localStorage.setItem(STORAGE_KEYS.GIGS, JSON.stringify(updated));
@@ -1338,7 +1395,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setBids((prev) => {
-      const filtered = (prev || []).filter((b) => !(String(b.gigId).trim() === cleanGigId && String(b.freelancerId).trim() === String(fallbackUser.id).trim()));
+      const filtered = (prev || []).filter(
+        (b) =>
+          !(
+            String(b.gigId).trim() === cleanGigId &&
+            (String(b.freelancerId).trim() === String(fallbackUser.id).trim() ||
+              (b.freelancerName && fallbackUser.fullName && b.freelancerName.toLowerCase().trim() === fallbackUser.fullName.toLowerCase().trim()))
+          )
+      );
       const updated = [newBid, ...filtered];
       try {
         localStorage.setItem(STORAGE_KEYS.BIDS, JSON.stringify(updated));
@@ -1346,9 +1410,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return updated;
     });
 
-    // Increment proposal count on target gig
+    // Update proposal count on target gig directly based on unique proposals
     setGigs((prev) => {
-      const updated = (prev || []).map((g) => (String(g.id).trim() === cleanGigId ? { ...g, proposalsCount: (g.proposalsCount || 0) + 1 } : g));
+      const updated = (prev || []).map((g) => {
+        if (String(g.id).trim() === cleanGigId) {
+          return { ...g, proposalsCount: Math.max(1, (g.proposalsCount || 0)) };
+        }
+        return g;
+      });
       try {
         localStorage.setItem(STORAGE_KEYS.GIGS, JSON.stringify(updated));
       } catch {}
@@ -2327,6 +2396,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerCelebration();
   }, [contracts, currentUser, addToast, triggerCelebration]);
 
+  // Helper: Query dynamic specialist rating statistics across all completed client orders
+  const getFreelancerRating = useCallback((freelancerId: string): FreelancerRatingStats => {
+    return getFreelancerRatingStats(freelancerId, contracts);
+  }, [contracts]);
+
   // Action: Client signs off and completes contract with mutual rating & review
   const completeContract = useCallback((contractId: string, rating = 5, reviewText = 'Outstanding engineering execution and on-time delivery!') => {
     const targetContract = contracts.find((c) => c.id === contractId);
@@ -2344,40 +2418,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    setContracts((prev) =>
-      prev.map((c) =>
-        c.id === contractId
-          ? {
-              ...c,
-              status: 'completed' as const,
-              completedAt: new Date().toISOString(),
-              clientRating: rating,
-              clientReview: reviewText,
-            }
-          : c
-      )
+    const updatedContracts = contracts.map((c) =>
+      c.id === contractId
+        ? {
+            ...c,
+            status: 'completed' as const,
+            completedAt: new Date().toISOString(),
+            clientRating: rating,
+            clientReview: reviewText,
+          }
+        : c
     );
+
+    setContracts(updatedContracts);
+
+    // Compute updated average rating for the specialist across all rated contracts
+    const fId = String(targetContract.freelancerId).trim();
+    const stats = getFreelancerRatingStats(fId, updatedContracts);
 
     const gigId = targetContract.gigId;
     setGigs((prev) =>
       prev.map((g) => (String(g.id).trim() === String(gigId).trim() ? { ...g, status: 'completed' as const } : g))
     );
 
+    // Update dynamic freelancer rating on all bids
+    setBids((prev) =>
+      prev.map((b) =>
+        String(b.freelancerId || (b as any).freelancer_id).trim() === fId
+          ? { ...b, freelancerRating: stats.averageRating, freelancerCompletedOrders: stats.reviewsCount }
+          : b
+      )
+    );
+
     setCurrentUser((prev) => {
       if (!prev) return prev;
-      if (prev.id === targetContract?.freelancerId) {
+      if (String(prev.id).trim() === fId) {
         return {
           ...prev,
-          completedProjects: (prev.completedProjects || 0) + 1,
-          totalEarned: (prev.totalEarned || 0) + (targetContract?.amount || 0),
-          rating: rating,
+          completedProjects: stats.reviewsCount,
+          totalEarned: (prev.totalEarned || 0) + (targetContract.amount || 0),
+          rating: stats.averageRating,
+          reviewsCount: stats.reviewsCount,
         };
       }
-      if (prev.id === targetContract?.clientId) {
+      if (String(prev.id).trim() === String(targetContract.clientId).trim()) {
         return {
           ...prev,
           completedProjects: (prev.completedProjects || 0) + 1,
-          totalSpent: (prev.totalSpent || 0) + (targetContract?.amount || 0),
+          totalSpent: (prev.totalSpent || 0) + (targetContract.amount || 0),
         };
       }
       return prev;
@@ -2391,7 +2479,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       senderName,
       senderAvatar: currentUser?.avatarUrl || targetContract.clientAvatar,
       senderRole: 'client',
-      content: `🏆 **Contract Successfully Completed & Closed!**\n⭐ Client Rating: ${rating}/5 Stars\n💬 Review: "${reviewText}"\nAll escrow funds have been 100% disbursed. Thank you for the collaboration!`,
+      content: `🏆 **Contract Successfully Completed & Closed!**\n⭐ Client Rating: ${rating}/5 Stars (Specialist Average: ${stats.averageRating}★ from ${stats.reviewsCount} review${stats.reviewsCount > 1 ? 's' : ''})\n💬 Review: "${reviewText}"\nAll escrow funds have been 100% disbursed. Thank you for the collaboration!`,
       createdAt: new Date().toISOString(),
       isRead: false,
     };
@@ -2431,14 +2519,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userId: targetContract.freelancerId,
       type: 'contract',
       title: 'Contract Successfully Completed! 🏆',
-      body: `${senderName} approved final handover and rated you ${rating}★! Escrow is 100% unlocked.`,
+      body: `${senderName} approved final handover and rated you ${rating}★ (New Average: ${stats.averageRating}★)! Escrow is 100% unlocked.`,
       isRead: false,
       createdAt: new Date().toISOString(),
       targetView: 'contracts',
     };
     setNotifications((prev) => [notif, ...prev]);
 
-    addToast('success', 'Contract Completed!', '100% of escrow disbursed and rating submitted.');
+    addToast('success', 'Contract Completed!', `100% of escrow disbursed and rating submitted. Overall specialist rating updated to ${stats.averageRating}★.`);
     triggerCelebration();
   }, [contracts, currentUser, addToast, triggerCelebration]);
 
@@ -3423,6 +3511,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isSyncingGigs,
       refreshGigs,
       adminStats,
+      getFreelancerRating,
       login,
       signup,
       adminLogin,
@@ -3494,6 +3583,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isSyncingGigs,
       refreshGigs,
       adminStats,
+      getFreelancerRating,
       login,
       signup,
       adminLogin,

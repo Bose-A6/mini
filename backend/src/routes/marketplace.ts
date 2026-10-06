@@ -350,6 +350,12 @@ interface StoreData {
   tickets: any[];
 }
 
+export const getCanonicalGigKey = (title?: string, clientId?: string): string => {
+  const cleanTitle = String(title || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const cleanClientId = String(clientId || '').trim().toLowerCase();
+  return cleanTitle ? `${cleanTitle}__${cleanClientId}` : '';
+};
+
 const loadStore = (): StoreData => {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -381,6 +387,31 @@ const loadStore = (): StoreData => {
         }
       }
     }
+
+    // Strict deduplication of combinedGigs by canonical key (clean title + clientId)
+    const uniqueGigsMap = new Map<string, any>();
+    for (const g of combinedGigs) {
+      const canonicalKey = getCanonicalGigKey(g.title, g.clientId || g.client_id) || String(g.id).trim();
+      if (!uniqueGigsMap.has(canonicalKey)) {
+        uniqueGigsMap.set(canonicalKey, g);
+      } else {
+        const existing = uniqueGigsMap.get(canonicalKey);
+        const preferredCategoryName = (!existing.categoryName || existing.categoryName === 'Full-Stack Architecture') && g.categoryName && g.categoryName !== 'Full-Stack Architecture'
+          ? g.categoryName
+          : existing.categoryName || g.categoryName;
+        const preferredCategoryId = (!existing.categoryId || existing.categoryId === 'fullstack') && g.categoryId && g.categoryId !== 'fullstack'
+          ? g.categoryId
+          : existing.categoryId || g.categoryId;
+        
+        uniqueGigsMap.set(canonicalKey, {
+          ...g,
+          ...existing,
+          categoryName: preferredCategoryName,
+          categoryId: preferredCategoryId,
+        });
+      }
+    }
+    combinedGigs = Array.from(uniqueGigsMap.values());
 
     const existingVerifs = Array.isArray(parsed.verifications) ? parsed.verifications : [];
     const combinedVerifs = existingVerifs.length > 0 ? existingVerifs : initialSeedVerifications;
@@ -443,11 +474,22 @@ const loadStore = (): StoreData => {
         .map((c: any) => String(c.gigId).trim())
     );
 
+    const rawBids = Array.isArray(parsed.bids) ? parsed.bids : [];
+    const uniqueBidsMap = new Map<string, any>();
+    for (const b of rawBids) {
+      const key = `${String(b.gigId || b.gig_id).trim()}__${String(b.freelancerId || b.freelancer_id).trim()}`;
+      uniqueBidsMap.set(key, b);
+    }
+    const deduplicatedBids = Array.from(uniqueBidsMap.values());
+
+    // Synchronize gigs proposals count and completion status
     combinedGigs = combinedGigs.map((g: any) => {
+      const count = deduplicatedBids.filter((b: any) => String(b.gigId || b.gig_id).trim() === String(g.id).trim()).length;
+      let status = g.status;
       if (completedContractGigIds.has(String(g.id).trim())) {
-        return { ...g, status: 'completed' };
+        status = 'completed';
       }
-      return g;
+      return { ...g, status, proposalsCount: count };
     });
 
     const existingTickets = Array.isArray(parsed.tickets) ? parsed.tickets : [];
@@ -455,14 +497,14 @@ const loadStore = (): StoreData => {
 
     const loadedData: StoreData = {
       gigs: combinedGigs.length > 0 ? combinedGigs : initialSeedGigs,
-      bids: Array.isArray(parsed.bids) ? parsed.bids : [],
+      bids: deduplicatedBids,
       contracts: normalizedContracts,
       messages: Array.isArray(parsed.messages) ? parsed.messages : [],
       verifications: combinedVerifs,
       tickets: combinedTickets,
     };
 
-    if (didSynthesize || completedContractGigIds.size > 0 || existingTickets.length === 0) {
+    if (didSynthesize || completedContractGigIds.size > 0 || existingTickets.length === 0 || rawBids.length !== deduplicatedBids.length || existingGigs.length !== combinedGigs.length) {
       try {
         fs.writeFileSync(STORE_PATH, JSON.stringify(loadedData, null, 2), 'utf-8');
       } catch {}
@@ -589,8 +631,122 @@ const verificationSchema = z.object({
 
 const slugify = (value: string) => `${value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Math.random().toString(36).slice(2, 8)}`;
 
+const isValidUUID = (id?: string | null): boolean => {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id).trim());
+};
+
+const resolveUserIdToUUID = async (identifier?: string, email?: string): Promise<string | null> => {
+  if (!identifier && !email) return null;
+  if (identifier && isValidUUID(identifier)) return identifier;
+  
+  try {
+    const targetEmail = (email || (identifier && identifier.includes('@') ? identifier : '')).trim().toLowerCase();
+    if (targetEmail) {
+      const { data } = await supabaseAdmin.from('profiles').select('id').eq('email', targetEmail).maybeSingle();
+      if (data?.id && isValidUUID(data.id)) return data.id;
+    }
+    const { data: profileData } = await supabaseAdmin.from('profiles').select('id').limit(1);
+    if (profileData && profileData.length > 0 && isValidUUID(profileData[0].id)) {
+      return profileData[0].id;
+    }
+  } catch {}
+  return null;
+};
+
+const syncVerificationToSupabase = async (verif: any) => {
+  try {
+    const targetUserId = await resolveUserIdToUUID(verif.userId, verif.userEmail);
+    if (targetUserId) {
+      await supabaseAdmin.from('freelancer_verifications').upsert({
+        user_id: targetUserId,
+        status: verif.status || 'pending',
+        id_document_url: verif.idDocumentUrl || null,
+        selfie_url: verif.selfieUrl || null,
+        portfolio_files: Array.isArray(verif.portfolioFiles) ? verif.portfolioFiles : [],
+        certificates: Array.isArray(verif.certificates) ? verif.certificates : [],
+        external_links: Array.isArray(verif.externalLinks) ? verif.externalLinks : [],
+        skill_tags: Array.isArray(verif.skillTags) ? verif.skillTags : [],
+        pitch_statement: verif.pitchStatement || '',
+        admin_comment: verif.adminComment || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    }
+  } catch (err) {
+    console.warn('Supabase verification sync note:', err);
+  }
+};
+
+const syncContractToSupabase = async (contract: any) => {
+  try {
+    const clientId = await resolveUserIdToUUID(contract.clientId);
+    const freelancerId = await resolveUserIdToUUID(contract.freelancerId);
+
+    const deliverables: string[] = [];
+    if (Array.isArray(contract.deliverables)) {
+      contract.deliverables.forEach((d: any) => {
+        if (typeof d === 'string') deliverables.push(d);
+        else if (d?.fileUrl) deliverables.push(d.fileUrl);
+      });
+    }
+    if (Array.isArray(contract.milestones)) {
+      contract.milestones.forEach((m: any) => {
+        if (m.paymentProof?.proofUrl) deliverables.push(m.paymentProof.proofUrl);
+        if (m.paymentDetails?.qrCodeUrl) deliverables.push(m.paymentDetails.qrCodeUrl);
+        if (Array.isArray(m.deliverableFiles)) deliverables.push(...m.deliverableFiles);
+      });
+    }
+
+    if (clientId && freelancerId) {
+      const orderPayload: any = {
+        client_id: clientId,
+        freelancer_id: freelancerId,
+        status: contract.status === 'completed' ? 'completed' : 'in_progress',
+        amount: Number(contract.amount || 0),
+        title: contract.gigTitle || 'Contract Milestone Order',
+        description: `Contract ${contract.id} - ${contract.milestones?.length || 0} Milestones - QR / Proof Synchronized`,
+        deliverables,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (isValidUUID(contract.id)) {
+        orderPayload.id = contract.id;
+      }
+      if (isValidUUID(contract.gigId)) {
+        orderPayload.gig_id = contract.gigId;
+      }
+
+      const { data: orderData } = await supabaseAdmin.from('orders').upsert(orderPayload).select().maybeSingle();
+
+      if (orderData?.id) {
+        const proofs = (contract.milestones || []).filter((m: any) => m.paymentProof);
+        for (const p of proofs) {
+          if (p.paymentProof) {
+            await supabaseAdmin.from('order_events').insert({
+              order_id: orderData.id,
+              actor_id: clientId,
+              event_type: 'payment_proof_submitted',
+              message: `Payment proof attached: ${p.paymentProof.transactionId || 'Receipt'} (${p.paymentProof.paymentMode || 'UPI'})`,
+              metadata: {
+                milestoneId: p.id,
+                milestoneTitle: p.title,
+                amount: p.amount,
+                proofUrl: p.paymentProof.proofUrl,
+                transactionId: p.paymentProof.transactionId,
+                paymentMode: p.paymentProof.paymentMode,
+              },
+            });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase contract sync note:', err);
+  }
+};
+
 // ==========================================
-// GIGS ENDPOINTS (Guaranteed Sync)
+// GIGS ENDPOINTS (Guaranteed Sync & Strict 1x Uniqueness)
 // ==========================================
 
 router.get('/gigs', async (req, res) => {
@@ -618,46 +774,69 @@ router.get('/gigs', async (req, res) => {
     }
   } catch {}
 
-  // Merge store gigs and Supabase gigs
+  // Merge store gigs and Supabase gigs with strict canonical deduplication
   const allGigsMap = new Map<string, any>();
+  const gigKeyToIdMap = new Map<string, string>();
 
   // Add store gigs first with accurate dynamic proposal count
   for (const gig of store.gigs) {
     const matchingBids = store.bids.filter((b) => String(b.gigId || b.gig_id).trim() === String(gig.id).trim());
-    allGigsMap.set(gig.id, {
+    const canonicalKey = getCanonicalGigKey(gig.title, gig.clientId || gig.client_id) || String(gig.id).trim();
+    const gigObj = {
       ...gig,
       proposalsCount: matchingBids.length > 0 ? matchingBids.length : (gig.proposalsCount || 0),
-    });
+    };
+    allGigsMap.set(String(gig.id).trim(), gigObj);
+    if (canonicalKey) {
+      gigKeyToIdMap.set(canonicalKey, String(gig.id).trim());
+    }
   }
 
-  // Merge Supabase gigs
+  // Merge Supabase gigs without creating duplicate cards
   for (const sg of supabaseGigs) {
-    if (!allGigsMap.has(sg.id)) {
-      const matchingBids = store.bids.filter((b) => String(b.gigId || b.gig_id).trim() === String(sg.id).trim());
-      allGigsMap.set(sg.id, {
-        id: sg.id,
-        clientId: sg.client_id || sg.clientId,
-        client_id: sg.client_id || sg.clientId,
-        clientName: sg.profiles?.full_name || sg.clientName || 'Enterprise Client',
-        clientAvatar: sg.profiles?.avatar_url || sg.clientAvatar,
-        clientCompany: sg.clientCompany || 'Enterprise Project',
-        clientVerified: sg.profiles?.is_verified ?? true,
-        title: sg.title,
-        slug: sg.slug,
-        description: sg.description,
-        budgetMin: sg.budget_min ?? sg.budgetMin ?? 1000,
-        budget_min: sg.budget_min ?? sg.budgetMin ?? 1000,
-        budgetMax: sg.budget_max ?? sg.budgetMax ?? 5000,
-        budget_max: sg.budget_max ?? sg.budgetMax ?? 5000,
-        categoryId: sg.categories?.slug || sg.category_id || sg.categoryId || 'fullstack',
-        categoryName: sg.categories?.name || sg.categoryName || 'Full-Stack Architecture',
-        deadline: sg.deadline,
-        status: sg.status || 'open',
-        tags: sg.tags || ['Full-Stack'],
-        referenceFiles: sg.reference_files || [],
-        proposalsCount: matchingBids.length > 0 ? matchingBids.length : (sg.proposalsCount || 0),
-        createdAt: sg.created_at || sg.createdAt || new Date().toISOString(),
-      });
+    const canonicalKey = getCanonicalGigKey(sg.title, sg.client_id || sg.clientId);
+    const existingId = allGigsMap.has(String(sg.id).trim())
+      ? String(sg.id).trim()
+      : (canonicalKey ? gigKeyToIdMap.get(canonicalKey) : undefined);
+
+    if (existingId) {
+      // Gig already exists in store! Update missing fields if needed without duplicate
+      const existing = allGigsMap.get(existingId);
+      if (sg.categories?.name && (!existing.categoryName || existing.categoryName === 'Full-Stack Architecture')) {
+        existing.categoryName = sg.categories.name;
+        existing.categoryId = sg.categories.slug || existing.categoryId;
+      }
+      continue;
+    }
+
+    const matchingBids = store.bids.filter((b) => String(b.gigId || b.gig_id).trim() === String(sg.id).trim());
+    const newSgObj = {
+      id: sg.id,
+      clientId: sg.client_id || sg.clientId,
+      client_id: sg.client_id || sg.clientId,
+      clientName: sg.profiles?.full_name || sg.clientName || 'Enterprise Client',
+      clientAvatar: sg.profiles?.avatar_url || sg.clientAvatar,
+      clientCompany: sg.clientCompany || 'Enterprise Project',
+      clientVerified: sg.profiles?.is_verified ?? true,
+      title: sg.title,
+      slug: sg.slug,
+      description: sg.description,
+      budgetMin: sg.budget_min ?? sg.budgetMin ?? 1000,
+      budget_min: sg.budget_min ?? sg.budgetMin ?? 1000,
+      budgetMax: sg.budget_max ?? sg.budgetMax ?? 5000,
+      budget_max: sg.budget_max ?? sg.budgetMax ?? 5000,
+      categoryId: sg.categories?.slug || sg.category_id || sg.categoryId || 'fullstack',
+      categoryName: sg.categories?.name || sg.categoryName || 'Full-Stack Architecture',
+      deadline: sg.deadline,
+      status: sg.status || 'open',
+      tags: sg.tags || ['Full-Stack'],
+      referenceFiles: sg.reference_files || [],
+      proposalsCount: matchingBids.length > 0 ? matchingBids.length : (sg.proposalsCount || 0),
+      createdAt: sg.created_at || sg.createdAt || new Date().toISOString(),
+    };
+    allGigsMap.set(String(sg.id).trim(), newSgObj);
+    if (canonicalKey) {
+      gigKeyToIdMap.set(canonicalKey, String(sg.id).trim());
     }
   }
 
@@ -747,8 +926,21 @@ router.post('/gigs', async (req, res) => {
     ],
   };
 
-  // Attempt Supabase sync if valid UUID
+  // Attempt Supabase sync with matching category UUID if present
   try {
+    let categoryDbId: string | null = null;
+    const catQuery = (parsed.data.categoryId || parsed.data.categoryName || '').toLowerCase();
+    if (catQuery) {
+      const { data: catData } = await supabaseAdmin
+        .from('categories')
+        .select('id')
+        .or(`slug.ilike.%${catQuery}%,name.ilike.%${catQuery}%`)
+        .maybeSingle();
+      if (catData?.id) {
+        categoryDbId = catData.id;
+      }
+    }
+
     await supabaseAdmin
       .from('gigs')
       .insert({
@@ -760,13 +952,20 @@ router.post('/gigs', async (req, res) => {
         budget_max: parsed.data.budgetMax,
         deadline: parsed.data.deadline ?? null,
         reference_files: parsed.data.referenceFiles,
+        category_id: categoryDbId,
         status: parsed.data.status,
       });
   } catch {}
 
-  const existingIdx = store.gigs.findIndex((g) => g.id === newGigData.id || g.slug === newGigData.slug);
+  const canonicalNewKey = getCanonicalGigKey(newGigData.title, newGigData.clientId);
+  const existingIdx = store.gigs.findIndex((g) => {
+    if (g.id === newGigData.id || g.slug === newGigData.slug) return true;
+    const keyG = getCanonicalGigKey(g.title, g.clientId || g.client_id);
+    return Boolean(keyG && canonicalNewKey && keyG === canonicalNewKey);
+  });
+
   if (existingIdx >= 0) {
-    store.gigs[existingIdx] = newGigData;
+    store.gigs[existingIdx] = { ...store.gigs[existingIdx], ...newGigData };
   } else {
     store.gigs.unshift(newGigData);
   }
@@ -800,37 +999,14 @@ router.get('/bids', async (req, res) => {
   const freelancerId = typeof req.query.freelancerId === 'string' ? req.query.freelancerId : undefined;
   const clientId = typeof req.query.clientId === 'string' ? req.query.clientId : undefined;
 
-  let results = [...store.bids];
+  // Strict deduplication map indexed by gigId + freelancerKey (Guarantee 1x proposal only)
+  const allBidsMap = new Map<string, any>();
+  for (const b of store.bids || []) {
+    const key = `${String(b.gigId || b.gig_id).trim()}__${String(b.freelancerId || b.freelancer_id || b.freelancerName).trim()}`;
+    allBidsMap.set(key, b);
+  }
 
-  // Try fetching additional Supabase bids if available
-  try {
-    const { data: dbBids } = await supabaseAdmin
-      .from('bids')
-      .select('*, profiles!bids_freelancer_id_fkey(id, full_name, professional_title, avatar_url, is_verified)');
-    if (dbBids && Array.isArray(dbBids)) {
-      for (const sb of dbBids) {
-        if (!results.some((b) => b.id === sb.id)) {
-          results.push({
-            id: sb.id,
-            gigId: sb.gig_id,
-            gig_id: sb.gig_id,
-            freelancerId: sb.freelancer_id,
-            freelancer_id: sb.freelancer_id,
-            freelancerName: sb.profiles?.full_name || 'Verified Freelancer',
-            freelancerTitle: sb.profiles?.professional_title || 'Specialist Engineer',
-            freelancerAvatar: sb.profiles?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-            freelancerRating: 5.0,
-            isVerified: sb.profiles?.is_verified ?? true,
-            status: sb.status || 'pending',
-            proposedPrice: sb.proposed_price,
-            deliveryDays: sb.delivery_days,
-            coverMessage: sb.cover_message || '',
-            createdAt: sb.created_at,
-          });
-        }
-      }
-    }
-  } catch {}
+  let results = Array.from(allBidsMap.values());
 
   if (gigId) {
     results = results.filter((b) => String(b.gigId || b.gig_id).trim() === String(gigId).trim());
@@ -842,6 +1018,24 @@ router.get('/bids', async (req, res) => {
     const clientGigIds = new Set(store.gigs.filter((g) => g.clientId === clientId || g.client_id === clientId).map((g) => String(g.id).trim()));
     results = results.filter((b) => clientGigIds.has(String(b.gigId || b.gig_id).trim()));
   }
+
+  // Dynamically compute freelancer average rating and completed contracts count
+  results = results.map((b) => {
+    const fId = String(b.freelancerId || b.freelancer_id).trim();
+    const ratedContracts = (store.contracts || []).filter(
+      (c) => String(c.freelancerId).trim() === fId && c.status === 'completed' && typeof c.clientRating === 'number' && c.clientRating > 0
+    );
+    const completedCount = (store.contracts || []).filter((c) => String(c.freelancerId).trim() === fId && c.status === 'completed').length;
+    let avgRating = b.freelancerRating ?? 5.0;
+    if (ratedContracts.length > 0) {
+      avgRating = Math.round((ratedContracts.reduce((sum, c) => sum + Number(c.clientRating), 0) / ratedContracts.length) * 10) / 10;
+    }
+    return {
+      ...b,
+      freelancerRating: avgRating,
+      freelancerCompletedOrders: completedCount > 0 ? completedCount : (b.freelancerCompletedOrders ?? 0),
+    };
+  });
 
   // Sort latest first
   results.sort((a, b) => new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime());
@@ -884,26 +1078,37 @@ router.post('/gigs/:id/bids', async (req, res) => {
   };
 
   try {
-    await supabaseAdmin
-      .from('bids')
-      .insert({
-        gig_id: gigId,
-        freelancer_id: userId,
-        proposed_price: parsed.data.proposedPrice,
-        delivery_days: parsed.data.deliveryDays,
-        cover_message: parsed.data.coverMessage ?? null,
-      });
+    const isGigUUID = isValidUUID(gigId);
+    const targetFreelancerUUID = await resolveUserIdToUUID(userId);
+    if (isGigUUID && targetFreelancerUUID) {
+      await supabaseAdmin
+        .from('bids')
+        .upsert({
+          gig_id: gigId,
+          freelancer_id: targetFreelancerUUID,
+          proposed_price: parsed.data.proposedPrice,
+          delivery_days: parsed.data.deliveryDays,
+          cover_message: parsed.data.coverMessage ?? null,
+          status: 'pending',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'gig_id,freelancer_id' });
+    }
   } catch {}
 
-  // Remove existing bid for same freelancer & gig if re-applying
-  const existingIdx = store.bids.findIndex((b) => (String(b.gigId || b.gig_id).trim() === String(gigId).trim()) && (String(b.freelancerId || b.freelancer_id).trim() === String(userId).trim()));
-  if (existingIdx >= 0) {
-    store.bids.splice(existingIdx, 1);
-  }
+  // Strictly remove any previous bid for the same freelancer on this gig (Guarantee 1x proposal only)
+  store.bids = (store.bids || []).filter(
+    (b) => !(
+      String(b.gigId || b.gig_id).trim() === String(gigId).trim() &&
+      (
+        String(b.freelancerId || b.freelancer_id).trim() === String(userId).trim() ||
+        (b.freelancerName && newBid.freelancerName && b.freelancerName.toLowerCase().trim() === newBid.freelancerName.toLowerCase().trim())
+      )
+    )
+  );
 
   store.bids.unshift(newBid);
 
-  // Update proposals count on target gig
+  // Recalculate unique proposals on target gig
   const targetGig = store.gigs.find((g) => String(g.id).trim() === String(gigId).trim());
   if (targetGig) {
     targetGig.proposalsCount = store.bids.filter((b) => String(b.gigId || b.gig_id).trim() === String(gigId).trim()).length;
@@ -1068,6 +1273,8 @@ router.post('/contracts', async (req, res) => {
   store.messages.push(welcomeMsg);
 
   saveStore(store);
+  syncContractToSupabase(newContract);
+
   return res.status(201).json({ ok: true, contract: newContract, welcomeMessage: welcomeMsg });
 });
 
@@ -1088,7 +1295,25 @@ router.patch('/contracts/:id', async (req, res) => {
     }
   }
 
+  // Recalculate average rating for this freelancer across all rated completed contracts
+  if (contract.freelancerId) {
+    const fId = String(contract.freelancerId).trim();
+    const ratedContracts = store.contracts.filter(
+      (c) => String(c.freelancerId).trim() === fId && c.status === 'completed' && typeof c.clientRating === 'number' && c.clientRating > 0
+    );
+    if (ratedContracts.length > 0) {
+      const avg = Math.round((ratedContracts.reduce((sum, c) => sum + Number(c.clientRating), 0) / ratedContracts.length) * 10) / 10;
+      store.bids.forEach((b) => {
+        if (String(b.freelancerId || b.freelancer_id).trim() === fId) {
+          b.freelancerRating = avg;
+          b.freelancerCompletedOrders = ratedContracts.length;
+        }
+      });
+    }
+  }
+
   saveStore(store);
+  syncContractToSupabase(contract);
 
   return res.json({ ok: true, contract });
 });
@@ -1184,7 +1409,39 @@ router.post('/contracts/:orderId/messages', async (req, res) => {
 
 router.get('/verifications', async (_req, res) => {
   store = loadStore();
-  const verifs = store.verifications || [];
+  const verifs = [...(store.verifications || [])];
+
+  try {
+    const { data: dbVerifs } = await supabaseAdmin.from('freelancer_verifications').select('*, profiles(id, full_name, email, professional_title, avatar_url)');
+    if (dbVerifs && Array.isArray(dbVerifs)) {
+      for (const dv of dbVerifs) {
+        const matchingIdx = verifs.findIndex((v) => v.userId === dv.user_id || v.id === dv.id);
+        const mapped = {
+          id: dv.id,
+          userId: dv.user_id,
+          userName: dv.profiles?.full_name || 'Applicant',
+          userEmail: dv.profiles?.email || 'applicant@example.com',
+          professionalTitle: dv.profiles?.professional_title || 'Software Engineer',
+          status: dv.status || 'pending',
+          idDocumentUrl: dv.id_document_url,
+          selfieUrl: dv.selfie_url,
+          portfolioFiles: dv.portfolio_files || [],
+          certificates: dv.certificates || [],
+          externalLinks: dv.external_links || [],
+          skillTags: dv.skill_tags || [],
+          pitchStatement: dv.pitch_statement || '',
+          adminComment: dv.admin_comment || '',
+          submittedAt: dv.created_at || dv.updated_at || new Date().toISOString(),
+        };
+        if (matchingIdx >= 0) {
+          verifs[matchingIdx] = { ...verifs[matchingIdx], ...mapped };
+        } else {
+          verifs.unshift(mapped);
+        }
+      }
+    }
+  } catch {}
+
   verifs.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
   return res.json({ ok: true, verifications: verifs });
 });
@@ -1231,6 +1488,8 @@ router.post('/verifications', async (req, res) => {
   }
 
   saveStore(store);
+  syncVerificationToSupabase(newVerif);
+
   return res.status(201).json({ ok: true, submission: newVerif, verification: newVerif });
 });
 
@@ -1263,6 +1522,8 @@ router.patch('/verifications/:id/decision', async (req, res) => {
     }
 
     saveStore(store);
+    syncVerificationToSupabase(verif);
+
     return res.json({
       ok: true,
       submission: verif,

@@ -9,12 +9,12 @@ const router = Router();
 
 const verificationSubmitSchema = z.object({
   skillTags: z.array(z.string()).default([]),
-  pitchStatement: z.string().min(20).max(2000),
-  externalLinks: z.array(z.string().url()).default([]),
-  portfolioFiles: z.array(z.string().url()).default([]),
-  certificates: z.array(z.string().url()).default([]),
-  idDocumentUrl: z.string().url().optional(),
-  selfieUrl: z.string().url().optional(),
+  pitchStatement: z.string().default(''),
+  externalLinks: z.array(z.string()).default([]),
+  portfolioFiles: z.array(z.string()).default([]),
+  certificates: z.array(z.string()).default([]),
+  idDocumentUrl: z.string().optional(),
+  selfieUrl: z.string().optional(),
   professionalTitle: z.string().optional(),
   fullName: z.string().optional(),
 });

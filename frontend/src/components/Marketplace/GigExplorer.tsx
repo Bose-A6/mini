@@ -22,10 +22,9 @@ import {
   Megaphone,
   PenTool,
 } from 'lucide-react';
-import { GigDetailModal } from './GigDetailModal';
 
 export const GigExplorer: React.FC = () => {
-  const { gigs, categories, selectedGigId, setSelectedGigId, setActiveView, currentUser, isSyncingGigs, refreshGigs } = useApp();
+  const { gigs, categories, setSelectedGigId, setActiveView, currentUser, isSyncingGigs, refreshGigs } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -77,40 +76,49 @@ export const GigExplorer: React.FC = () => {
 
   const filteredGigs = useMemo(() => {
     const targetCat = categories.find((c) => c.id === selectedCategory);
-    return (gigs || [])
-      .filter((gig) => {
-        const gigStatus = gig.status || 'open';
-        const matchesStatus = gigStatus === 'open';
-        const matchesCategory =
-          selectedCategory === 'all' ||
-          gig.categoryId === selectedCategory ||
-          (targetCat && (gig.categoryId === targetCat.slug || gig.categoryName?.toLowerCase().includes(targetCat.name.toLowerCase())));
-        const matchesSearch =
-          searchQuery === '' ||
-          gig.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          gig.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (gig.tags || []).some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
-        const bMin = Number(gig.budgetMin ?? (gig as any).budget_min ?? 0);
-        const matchesBudget = maxBudgetFilter >= 15000 || bMin <= maxBudgetFilter;
+    const uniqueMap = new Map<string, typeof gigs[0]>();
 
-        return matchesCategory && matchesSearch && matchesBudget && matchesStatus;
-      })
-      .sort((a, b) => {
-        const dateA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
-        const dateB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
-        if (sortBy === 'newest') {
-          return dateB - dateA;
+    (gigs || []).forEach((gig) => {
+      const gigStatus = gig.status || 'open';
+      const matchesStatus = gigStatus === 'open';
+      const matchesCategory =
+        selectedCategory === 'all' ||
+        gig.categoryId === selectedCategory ||
+        (targetCat && (gig.categoryId === targetCat.slug || gig.categoryName?.toLowerCase().includes(targetCat.name.toLowerCase())));
+      const matchesSearch =
+        searchQuery === '' ||
+        gig.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        gig.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (gig.tags || []).some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      const bMin = Number(gig.budgetMin ?? (gig as any).budget_min ?? 0);
+      const matchesBudget = maxBudgetFilter >= 15000 || bMin <= maxBudgetFilter;
+
+      if (matchesCategory && matchesSearch && matchesBudget && matchesStatus) {
+        const cleanTitle = String(gig.title || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanClientId = String(gig.clientId || '').trim().toLowerCase();
+        const key = cleanTitle ? `${cleanTitle}__${cleanClientId}` : String(gig.id).trim();
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, gig);
         }
-        if (sortBy === 'budget_high') {
-          const maxA = Number(a.budgetMax ?? (a as any).budget_max ?? 0);
-          const maxB = Number(b.budgetMax ?? (b as any).budget_max ?? 0);
-          return maxB - maxA;
-        }
-        if (sortBy === 'proposals') {
-          return (a.proposalsCount || 0) - (b.proposalsCount || 0);
-        }
-        return 0;
-      });
+      }
+    });
+
+    return Array.from(uniqueMap.values()).sort((a, b) => {
+      const dateA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
+      const dateB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
+      if (sortBy === 'newest') {
+        return dateB - dateA;
+      }
+      if (sortBy === 'budget_high') {
+        const maxA = Number(a.budgetMax ?? (a as any).budget_max ?? 0);
+        const maxB = Number(b.budgetMax ?? (b as any).budget_max ?? 0);
+        return maxB - maxA;
+      }
+      if (sortBy === 'proposals') {
+        return (a.proposalsCount || 0) - (b.proposalsCount || 0);
+      }
+      return 0;
+    });
   }, [gigs, selectedCategory, categories, searchQuery, maxBudgetFilter, sortBy]);
 
   const isClient = currentUser?.role === 'client';
@@ -387,9 +395,6 @@ export const GigExplorer: React.FC = () => {
           ))}
         </div>
       )}
-
-      {/* Modal Detail View */}
-      {selectedGigId && <GigDetailModal />}
     </div>
   );
 };

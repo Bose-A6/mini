@@ -16,8 +16,8 @@ import {
   LifeBuoy,
   ShieldCheck,
 } from 'lucide-react';
-import { GigDetailModal } from '../Marketplace/GigDetailModal';
 import { mockPersonas } from '../../data/mockData';
+import type { Bid } from '../../types';
 
 export const ClientDashboard: React.FC = () => {
   const {
@@ -30,7 +30,6 @@ export const ClientDashboard: React.FC = () => {
     acceptBidAndCreateContract,
     declineBid,
     setActiveView,
-    selectedGigId,
     setSelectedGigId,
     setSelectedContractId,
     openSupportModal,
@@ -38,6 +37,7 @@ export const ClientDashboard: React.FC = () => {
     openDirectContractModal,
     getRepeatCollaboratorsForClient,
     getCollaborationBetween,
+    getFreelancerRating,
     setIsAuthModalOpen,
     setAuthMode,
     isSyncingGigs,
@@ -60,10 +60,19 @@ export const ClientDashboard: React.FC = () => {
   const [description, setDescription] = useState('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
-  // Client's gigs and proposals - strictly belonging to this authenticated client
+  // Client's gigs and proposals - strictly belonging to this authenticated client (defensively deduplicated)
   const clientGigs = useMemo(() => {
     if (!gigs || gigs.length === 0 || !currentUser) return [];
-    return gigs.filter((g) => String(g.clientId).trim() === String(currentUser.id).trim());
+    const myGigs = gigs.filter((g) => String(g.clientId).trim() === String(currentUser.id).trim());
+    const uniqueMap = new Map<string, typeof gigs[0]>();
+    for (const g of myGigs) {
+      const cleanTitle = String(g.title || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      const key = cleanTitle || String(g.id).trim();
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, g);
+      }
+    }
+    return Array.from(uniqueMap.values());
   }, [gigs, currentUser]);
 
   const filteredClientGigs = useMemo(() => {
@@ -79,18 +88,25 @@ export const ClientDashboard: React.FC = () => {
 
   const incomingBids = useMemo(() => {
     if (!currentUser || clientGigs.length === 0) return [];
-    return (bids || []).filter((b) => {
+    const uniqueMap = new Map<string, Bid>();
+    (bids || []).forEach((b) => {
       const isPending = (b.status || 'pending') === 'pending';
-      if (!isPending) return false;
+      if (!isPending) return;
       const cleanBidGigId = String(b.gigId || (b as any).gig_id || '').trim();
       
       if (selectedGigFilter !== 'all') {
-        return cleanBidGigId === String(selectedGigFilter).trim();
+        if (cleanBidGigId !== String(selectedGigFilter).trim()) return;
+      } else if (!clientGigs.some((cg) => String(cg.id).trim() === cleanBidGigId)) {
+        return;
       }
 
-      // Match ONLY proposals submitted on this client's posted projects
-      return clientGigs.some((cg) => String(cg.id).trim() === cleanBidGigId);
+      // Unique proposal per freelancer per gig
+      const key = `${cleanBidGigId}__${String(b.freelancerId || b.freelancerName || b.id).trim()}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, b);
+      }
     });
+    return Array.from(uniqueMap.values());
   }, [bids, selectedGigFilter, currentUser, clientGigs]);
 
   const allClientContracts = useMemo(() => {
@@ -631,9 +647,16 @@ export const ClientDashboard: React.FC = () => {
                               </span>
                             )}
                           </strong>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            {bid.freelancerTitle} • {bid.freelancerRating ?? 5.0} ★ ({bid.freelancerCompletedOrders ?? 0} completed)
-                          </span>
+                          {(() => {
+                            const stats = getFreelancerRating(bid.freelancerId);
+                            const ratingVal = stats.hasClientReviews ? stats.averageRating : (bid.freelancerRating ?? 5.0);
+                            const countVal = stats.hasClientReviews ? stats.reviewsCount : (bid.freelancerCompletedOrders ?? 0);
+                            return (
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                {bid.freelancerTitle} • <strong style={{ color: 'var(--accent-amber)' }}>★ {ratingVal}</strong> ({countVal} {countVal === 1 ? 'review' : 'reviews'})
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -649,10 +672,10 @@ export const ClientDashboard: React.FC = () => {
                             PROPOSED MILESTONES:
                           </span>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {bid.milestones.map((m, idx) => (
+                            {bid.milestones.map((m: any, idx: number) => (
                               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', padding: '4px 8px', borderRadius: 4, background: 'rgba(255, 255, 255, 0.02)' }}>
                                 <span style={{ color: 'var(--text-secondary)' }}>{idx + 1}. {m.title}</span>
-                                <strong style={{ color: 'var(--accent-emerald)' }}>${m.amount.toLocaleString()}</strong>
+                                <strong style={{ color: 'var(--accent-emerald)' }}>${Number(m.amount || 0).toLocaleString()}</strong>
                               </div>
                             ))}
                           </div>
@@ -1410,11 +1433,6 @@ export const ClientDashboard: React.FC = () => {
             </div>
           )}
         </div>
-      )}
-
-      {/* Gig Scope Detail Modal */}
-      {selectedGigId && (
-        <GigDetailModal />
       )}
     </div>
   );

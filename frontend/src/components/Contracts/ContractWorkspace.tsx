@@ -52,6 +52,7 @@ export const ContractWorkspace: React.FC = () => {
     openSupportModal,
     openInvoiceModal,
     getCollaborationBetween,
+    getFreelancerRating,
     setActiveView,
     addToast,
   } = useApp();
@@ -90,7 +91,20 @@ export const ContractWorkspace: React.FC = () => {
   // Final Completion modal state (Client)
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [rating, setRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState('Outstanding engineering execution, seamless communication, and on-time milestone delivery!');
+  const [isEditingRating, setIsEditingRating] = useState(false);
+
+  useEffect(() => {
+    if (contract) {
+      if (contract.clientRating) {
+        setRating(Number(contract.clientRating) || 5);
+      }
+      if (contract.clientReview) {
+        setReviewText(contract.clientReview);
+      }
+    }
+  }, [contract]);
 
   const chatBoxRef = useRef<HTMLDivElement>(null);
   const prevMsgCountRef = useRef<number>(0);
@@ -134,6 +148,21 @@ export const ContractWorkspace: React.FC = () => {
 
   const handleApproveMilestone = (milestoneId: string) => {
     approveMilestoneAndReleaseEscrow(contract.id, milestoneId);
+    
+    // If this milestone approval makes all milestone escrows approved, prompt the client to rate
+    const remainingPending = (contract.milestones || []).filter(
+      (m) => m.id !== milestoneId && m.status !== 'approved'
+    );
+    if (remainingPending.length === 0) {
+      if (isClient) {
+        addToast(
+          'success',
+          'All Escrows Approved! 🎉',
+          'Please rate the specialist. Your score directly updates their platform arithmetic average.'
+        );
+        setShowCompleteModal(true);
+      }
+    }
   };
 
   const handleRequestRevision = (e: React.FormEvent) => {
@@ -179,6 +208,7 @@ export const ContractWorkspace: React.FC = () => {
     e.preventDefault();
     completeContract(contract.id, rating, reviewText);
     setShowCompleteModal(false);
+    setIsEditingRating(false);
   };
 
   const isContractCompleted = contract.status === 'completed';
@@ -194,6 +224,27 @@ export const ContractWorkspace: React.FC = () => {
         .reduce((sum, m) => sum + (m.amount || 0), 0);
 
   const totalAmount = contract.amount || 1;
+
+  // Freelancer overall rating stats and live average calculation
+  const freelancerRatingStats = getFreelancerRating(contract.freelancerId);
+  const otherCompletedContracts = (contracts || []).filter(
+    (c) =>
+      String(c.freelancerId).trim() === String(contract.freelancerId).trim() &&
+      c.id !== contract.id &&
+      c.status === 'completed' &&
+      typeof c.clientRating === 'number' &&
+      c.clientRating > 0
+  );
+  const otherRatingsSum = otherCompletedContracts.reduce((acc, c) => acc + (c.clientRating || 0), 0);
+  const projectedAvgRating = Math.round(((otherRatingsSum + rating) / (otherCompletedContracts.length + 1)) * 10) / 10;
+
+  const ratingLabels: Record<number, string> = {
+    5: '5.0 ★ Exceptional Quality, Speed & Collaboration',
+    4: '4.0 ★ Very Good Delivery & Communication',
+    3: '3.0 ★ Satisfactory Delivery (Met Baseline Requirements)',
+    2: '2.0 ★ Below Expectations (Required Multiple Fixes)',
+    1: '1.0 ★ Unsatisfactory Quality',
+  };
 
   return (
     <div className="app-container">
@@ -674,6 +725,277 @@ export const ContractWorkspace: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* Rating & Review Card for Client and Freelancer once all milestone escrows are approved */}
+          {allMilestonesApproved && (
+            <div
+              className="glass-panel"
+              style={{
+                padding: '24px',
+                borderRadius: '16px',
+                background: isContractCompleted
+                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.08))'
+                  : 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(16, 185, 129, 0.15))',
+                border: isContractCompleted
+                  ? '1px solid rgba(16, 185, 129, 0.4)'
+                  : '1px solid rgba(99, 102, 241, 0.5)',
+                boxShadow: '0 12px 35px rgba(0, 0, 0, 0.35)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      background: isContractCompleted ? 'rgba(16, 185, 129, 0.25)' : 'rgba(99, 102, 241, 0.25)',
+                      display: 'grid',
+                      placeItems: 'center',
+                      color: isContractCompleted ? 'var(--accent-emerald)' : '#c7d2fe',
+                    }}
+                  >
+                    <Star size={20} fill={isContractCompleted ? 'var(--accent-emerald)' : '#c7d2fe'} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', margin: 0, color: 'var(--text-primary)' }}>
+                      {isClient
+                        ? (isContractCompleted ? 'Client Rating & Official Testimonial' : 'Rate Specialist & Complete Sign-off')
+                        : 'Official Client Rating & Feedback'}
+                    </h3>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      {isContractCompleted
+                        ? 'Recorded on escrow settlement & public specialist profile'
+                        : `All ${totalMilestonesCount} milestone escrows approved • Provide final rating to conclude contract`}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '3px 10px',
+                      borderRadius: 'var(--radius-full)',
+                      background: isContractCompleted ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                      color: isContractCompleted ? 'var(--accent-emerald)' : 'var(--accent-amber)',
+                      fontWeight: 700,
+                      border: isContractCompleted ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
+                    }}
+                  >
+                    {isContractCompleted ? 'RATING SUBMITTED ✅' : `ALL ${totalMilestonesCount} ESCROWS APPROVED 🌟`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Specialist Platform Rating Context Banner */}
+              <div
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  border: '1px solid var(--border-subtle)',
+                  marginBottom: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  fontSize: '0.84rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={16} color="var(--accent-amber)" />
+                  <span style={{ color: '#cbd5e1' }}>
+                    Freelancer Overall Rating: <strong style={{ color: 'var(--accent-amber)' }}>★ {freelancerRatingStats.averageRating} / 5.0</strong> ({freelancerRatingStats.reviewsCount} {freelancerRatingStats.reviewsCount === 1 ? 'client review' : 'client reviews'})
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  📈 Calculated as the true arithmetic average of all client ratings
+                </div>
+              </div>
+
+              {/* Client interactive rating form or completed display */}
+              {isClient ? (
+                <div>
+                  {isContractCompleted && !isEditingRating ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '4px', color: 'var(--accent-amber)' }}>
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star key={s} size={22} fill={s <= (contract.clientRating || 5) ? 'var(--accent-amber)' : 'none'} />
+                          ))}
+                        </div>
+                        <strong style={{ fontSize: '1rem', color: 'var(--accent-amber)' }}>
+                          {ratingLabels[contract.clientRating || 5] || `${contract.clientRating || 5}.0 ★`}
+                        </strong>
+                      </div>
+
+                      <div style={{ padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#e2e8f0', fontStyle: 'italic', lineHeight: 1.5 }}>
+                          "{contract.clientReview || reviewText}"
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => setIsEditingRating(true)}
+                          style={{ fontSize: '0.8rem', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Star size={14} /> Update Rating or Review
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      completeContract(contract.id, rating, reviewText);
+                      setIsEditingRating(false);
+                      setShowCompleteModal(false);
+                    }}>
+                      {/* Interactive Star Picker */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>
+                          Select Rating (1 to 5 Stars):
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setRating(star)}
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  color: (hoverRating || rating) >= star ? 'var(--accent-amber)' : 'rgba(255,255,255,0.2)',
+                                  transition: 'transform 0.15s ease',
+                                  transform: (hoverRating || rating) >= star ? 'scale(1.15)' : 'scale(1)',
+                                }}
+                                title={`${star} Star${star > 1 ? 's' : ''}`}
+                              >
+                                <Star
+                                  size={30}
+                                  fill={(hoverRating || rating) >= star ? 'var(--accent-amber)' : 'none'}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--accent-amber)', marginLeft: '6px' }}>
+                            {ratingLabels[hoverRating || rating]}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Review Textarea */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          Client Review & Testimonial:
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={reviewText}
+                          onChange={(e) => setReviewText(e.target.value)}
+                          placeholder="Share feedback on deliverable quality, technical velocity, communication..."
+                          style={{ width: '100%', resize: 'vertical', fontSize: '0.88rem' }}
+                          required
+                        />
+                      </div>
+
+                      {/* Live calculation impact preview */}
+                      <div
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          background: 'rgba(16, 185, 129, 0.08)',
+                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          marginBottom: '16px',
+                          fontSize: '0.82rem',
+                          color: '#a7f3d0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <CheckCircle2 size={16} color="var(--accent-emerald)" />
+                        <span>
+                          Live Impact: Submitting <strong>{rating}★</strong> will update {contract.freelancerName}'s overall platform average to <strong style={{ color: '#ffffff' }}>★ {projectedAvgRating}</strong> across {otherCompletedContracts.length + 1} completed client projects.
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        {isEditingRating && (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => setIsEditingRating(false)}
+                            style={{ fontSize: '0.85rem' }}
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        <button
+                          type="submit"
+                          className="btn-success"
+                          style={{
+                            fontSize: '0.88rem',
+                            padding: '10px 20px',
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            boxShadow: '0 4px 18px rgba(16, 185, 129, 0.35)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <CheckCircle2 size={18} />
+                          <span>{isContractCompleted ? 'Save Updated Rating & Review' : 'Submit Rating & Complete Contract'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              ) : (
+                /* Freelancer View of Rating */
+                <div>
+                  {contract.clientRating ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '3px', color: 'var(--accent-amber)' }}>
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star key={s} size={20} fill={s <= (contract.clientRating || 5) ? 'var(--accent-amber)' : 'none'} />
+                          ))}
+                        </div>
+                        <strong style={{ color: 'var(--accent-amber)', fontSize: '0.95rem' }}>
+                          {ratingLabels[contract.clientRating || 5]}
+                        </strong>
+                      </div>
+                      <div style={{ padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                        <p style={{ margin: 0, fontSize: '0.88rem', color: '#e2e8f0', fontStyle: 'italic' }}>
+                          "{contract.clientReview || 'Outstanding engineering execution and on-time milestone delivery!'}"
+                        </p>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckCircle2 size={14} />
+                        <span>Rating added to your specialist profile! Your overall average is now <strong>★ {freelancerRatingStats.averageRating}</strong> ({freelancerRatingStats.reviewsCount} reviews).</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', fontSize: '0.85rem', color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Clock size={16} />
+                      <span>All milestone escrows are approved! Waiting for {contract.clientName} to submit their official rating & testimonial.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Milestones List */}
           <div className="glass-panel" style={{ padding: '24px' }}>
@@ -1450,31 +1772,68 @@ export const ContractWorkspace: React.FC = () => {
               )}
             </div>
 
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '18px' }}>
-              Confirming completion will record your official rating & public testimonial for <strong>{contract.freelancerName}</strong> and complete the contract.
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+              Confirming completion will release final escrow, finalize blockchain records, and record your official rating for <strong>{contract.freelancerName}</strong>.
             </p>
+
+            {/* Freelancer overall average preview */}
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: '8px',
+                background: 'rgba(99, 102, 241, 0.12)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                marginBottom: '18px',
+                fontSize: '0.82rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Sparkles size={14} color="var(--accent-amber)" />
+                <span style={{ color: '#cbd5e1' }}>
+                  Current Public Average: <strong style={{ color: 'var(--accent-amber)' }}>★ {freelancerRatingStats.averageRating}</strong> ({freelancerRatingStats.reviewsCount} reviews)
+                </span>
+              </div>
+              <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>
+                ➔ With this rating: ★ {projectedAvgRating}
+              </span>
+            </div>
 
             <form onSubmit={handleCompleteContract}>
               {/* Star Rating */}
               <div style={{ marginBottom: '18px' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                  FREELANCER PERFORMANCE RATING
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    FREELANCER PERFORMANCE RATING
+                  </label>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-amber)' }}>
+                    {ratingLabels[hoverRating || rating]}
+                  </span>
+                </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       type="button"
                       onClick={() => setRating(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
                       style={{
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
                         padding: '4px',
-                        color: star <= rating ? 'var(--accent-amber)' : 'rgba(255,255,255,0.2)',
+                        color: (hoverRating || rating) >= star ? 'var(--accent-amber)' : 'rgba(255,255,255,0.2)',
+                        transition: 'transform 0.15s ease',
+                        transform: (hoverRating || rating) >= star ? 'scale(1.15)' : 'scale(1)',
                       }}
+                      title={`${star} Star${star > 1 ? 's' : ''}`}
                     >
-                      <Star size={28} fill={star <= rating ? 'var(--accent-amber)' : 'none'} />
+                      <Star size={30} fill={(hoverRating || rating) >= star ? 'var(--accent-amber)' : 'none'} />
                     </button>
                   ))}
                 </div>
@@ -1489,6 +1848,7 @@ export const ContractWorkspace: React.FC = () => {
                   rows={4}
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
+                  placeholder="Share feedback on code quality, speed, communication..."
                   style={{ width: '100%', resize: 'vertical' }}
                   required
                 />
@@ -1508,6 +1868,7 @@ export const ContractWorkspace: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
+                    fontWeight: 700,
                   }}
                 >
                   <CheckCircle2 size={16} />

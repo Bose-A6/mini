@@ -26,7 +26,6 @@ import {
   X,
 } from 'lucide-react';
 import type { Gig, SupportTicket, TicketCategory, TicketPriority, TicketStatus } from '../../types';
-import { GigDetailModal } from '../Marketplace/GigDetailModal';
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -44,7 +43,6 @@ export const AdminDashboard: React.FC = () => {
     adminUpdateTicket,
     refreshGigs,
     isSyncingGigs,
-    selectedGigId,
     setSelectedGigId,
     setSelectedContractId,
     setActiveView,
@@ -1965,9 +1963,6 @@ export const AdminDashboard: React.FC = () => {
           </button>
         </div>
       )}
-
-      {/* Scope Detail Modal */}
-      {selectedGigId && <GigDetailModal />}
     </div>
   );
 };
