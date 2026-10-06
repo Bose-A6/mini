@@ -1145,6 +1145,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (error?.message?.includes('already registered') || error?.message?.includes('already exists')) {
           return await login(cleanEmail, cleanPass);
         }
+        if (error?.message?.toLowerCase().includes('rate limit')) {
+          // Attempt sign in in case user account was already created
+          const loginRes = await login(cleanEmail, cleanPass);
+          if (loginRes.success) return loginRes;
+          return {
+            success: false,
+            error: 'Supabase email rate limit reached (max 3-4 emails/hr on free tier). Please disable "Confirm email" in Supabase Dashboard -> Authentication -> Providers -> Email, or sign in directly.',
+          };
+        }
         return {
           success: false,
           error: error?.message || 'Unable to register account. Please try again.',
