@@ -423,6 +423,8 @@ export const normalizeMessage = (raw: any): ChatMessage => {
   };
 };
 
+const isUUID = (str?: string | null): boolean => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(str || '').trim());
+
 export const normalizeVerification = (raw: any): VerificationSubmission => {
   return {
     id: String(raw.id || `verif-${Date.now()}`),
@@ -702,12 +704,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 5. Process Verifications
-      if (verifsRes.status === 'fulfilled' && verifsRes.value?.verifications) {
-        const backendVerifs: VerificationSubmission[] = verifsRes.value.verifications.map(normalizeVerification);
+      let backendVerifs: VerificationSubmission[] = [];
+      if (verifsRes.status === 'fulfilled' && verifsRes.value?.verifications && Array.isArray(verifsRes.value.verifications)) {
+        backendVerifs = verifsRes.value.verifications.map(normalizeVerification);
+      }
+
+      // Always query Supabase directly and enrich with profiles to guarantee zero data loss
+      try {
+        const [{ data: directVerifs }, { data: directProfiles }] = await Promise.all([
+          supabase.from('freelancer_verifications').select('*'),
+          supabase.from('profiles').select('*'),
+        ]);
+
+        if (directVerifs && Array.isArray(directVerifs) && directVerifs.length > 0) {
+          const profileMap = new Map<string, any>();
+          if (directProfiles && Array.isArray(directProfiles)) {
+            for (const p of directProfiles) {
+              if (p.id) profileMap.set(p.id, p);
+            }
+          }
+
+          const directMapped = directVerifs.map((dv) => {
+            const p = profileMap.get(dv.user_id);
+            return normalizeVerification({
+              ...dv,
+              userName: p?.full_name || dv.user_name || 'Applicant',
+              userEmail: p?.email || dv.user_email || 'applicant@example.com',
+              professionalTitle: p?.professional_title || dv.professional_title || 'Software Specialist',
+              selfieUrl: dv.selfie_url || p?.avatar_url,
+            });
+          });
+
+          const map = new Map<string, VerificationSubmission>();
+          for (const bv of backendVerifs) {
+            const key = `${String(bv.userId || '').trim()}__${(bv.userEmail || '').toLowerCase()}`;
+            map.set(key || bv.id, bv);
+          }
+          for (const dv of directMapped) {
+            const key = `${String(dv.userId || '').trim()}__${(dv.userEmail || '').toLowerCase()}`;
+            if (!map.has(key) && !map.has(dv.id)) {
+              map.set(key || dv.id, dv);
+            } else {
+              const existingKey = map.has(key) ? key : dv.id;
+              const existing = map.get(existingKey)!;
+              map.set(existingKey, {
+                ...existing,
+                ...dv,
+                userName: dv.userName && dv.userName !== 'Applicant' ? dv.userName : existing.userName,
+                userEmail: dv.userEmail && dv.userEmail !== 'applicant@example.com' ? dv.userEmail : existing.userEmail,
+              });
+            }
+          }
+          backendVerifs = Array.from(map.values());
+        }
+      } catch {}
+
+      if (backendVerifs.length > 0) {
         setVerifications((prev) => {
           const verifMap = new Map<string, VerificationSubmission>();
-          for (const v of prev || []) verifMap.set(String(v.id).trim(), v);
-          for (const bv of backendVerifs) verifMap.set(String(bv.id).trim(), bv);
+          for (const v of prev || []) {
+            const key = `${String(v.userId || '').trim()}__${(v.userEmail || '').toLowerCase()}`;
+            verifMap.set(key || v.id, v);
+          }
+          for (const bv of backendVerifs) {
+            const key = `${String(bv.userId || '').trim()}__${(bv.userEmail || '').toLowerCase()}`;
+            verifMap.set(key || bv.id, bv);
+          }
           const combined = Array.from(verifMap.values());
           combined.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
           try { localStorage.setItem(STORAGE_KEYS.VERIFICATIONS, JSON.stringify(combined)); } catch {}
@@ -2550,7 +2612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerCelebration();
   }, [contracts, currentUser, addToast, triggerCelebration]);
 
-  // Action: Submit Verification (Connected to Backend & Admin Queue)
+  // Action: Submit Verification (Connected to Backend & Admin Queue & Supabase Direct)
   const submitVerification = useCallback((data: Omit<VerificationSubmission, 'id' | 'userId' | 'userName' | 'userEmail' | 'status' | 'submittedAt'>): VerificationSubmission => {
     const user = currentUser || {
       id: `freelancer-${Date.now()}`,
@@ -2597,7 +2659,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser((prev) => (prev ? { ...prev, isVerified: false } : null));
     }
 
-    // Backend sync
+    // 1. Backend REST API sync
     try {
       const apiUrl = getApiBaseUrl();
       fetch(`${apiUrl}/api/marketplace/verifications`, {
@@ -2609,6 +2671,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .then(() => fetchGigsFromBackend())
         .catch(() => {});
     } catch {}
+
+    // 2. Direct Supabase Client sync
+    (async () => {
+      try {
+        const { data: authSession } = await supabase.auth.getSession();
+        const currentAuthUser = authSession?.session?.user;
+        const targetUserId = currentAuthUser?.id || (user.id && isUUID(user.id) ? user.id : null);
+        if (targetUserId) {
+          await supabase.from('profiles').upsert({
+            id: targetUserId,
+            email: user.email,
+            full_name: user.fullName,
+            role: 'freelancer',
+            is_verified: false,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+
+          await supabase.from('freelancer_verifications').upsert({
+            user_id: targetUserId,
+            status: 'pending',
+            id_document_url: newVerif.idDocumentUrl || null,
+            selfie_url: newVerif.selfieUrl || null,
+            portfolio_files: Array.isArray(newVerif.portfolioFiles) ? newVerif.portfolioFiles : [],
+            certificates: Array.isArray(newVerif.certificates) ? newVerif.certificates : [],
+            external_links: Array.isArray(newVerif.externalLinks) ? newVerif.externalLinks : [],
+            skill_tags: Array.isArray(newVerif.skillTags) ? newVerif.skillTags : [],
+            pitch_statement: newVerif.pitchStatement || '',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+        }
+      } catch {}
+    })();
 
     addToast('success', 'Verification Submitted! ⏳', 'Queued for Platform Administrator review and approval.');
     triggerCelebration();
@@ -2655,7 +2749,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser((prev) => (prev ? { ...prev, isVerified: status === 'approved' } : null));
     }
 
-    // Backend API sync
+    // 1. Backend API sync
     try {
       const apiUrl = getApiBaseUrl();
       fetch(`${apiUrl}/api/marketplace/verifications/${verificationId}/decision`, {
@@ -2667,6 +2761,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .then(() => fetchGigsFromBackend())
         .catch(() => {});
     } catch {}
+
+    // 2. Direct Supabase sync
+    (async () => {
+      try {
+        if (candidateId && isUUID(candidateId)) {
+          await supabase.from('freelancer_verifications').update({
+            status,
+            admin_comment: adminComment,
+            reviewed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }).eq('user_id', candidateId);
+
+          await supabase.from('profiles').update({
+            is_verified: status === 'approved',
+            updated_at: new Date().toISOString(),
+          }).eq('id', candidateId);
+        }
+      } catch {}
+    })();
 
     addToast(
       status === 'approved' ? 'success' : status === 'rejected' ? 'warning' : 'info',
