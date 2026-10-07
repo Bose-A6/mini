@@ -86,7 +86,7 @@ const AppContent: React.FC = () => {
             <div>
               <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>FreelanceStack Elite</strong>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
-                Logged in as <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>{currentUser.fullName}</span> ({currentUser.role.toUpperCase()})
+                Logged in as <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>{currentUser.fullName}</span> ({ (activeView === 'client' ? 'client' : activeView === 'freelancer' ? 'freelancer' : activeView === 'admin' ? 'admin' : (currentUser.role || 'client')).toUpperCase() })
               </p>
             </div>
           </div>

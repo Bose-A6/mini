@@ -39,7 +39,15 @@ export const Navbar: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const role = currentUser.role;
+  const role = currentUser.role || 'client';
+  const currentWorkspace =
+    activeView === 'client'
+      ? 'client'
+      : activeView === 'freelancer'
+      ? 'freelancer'
+      : activeView === 'admin'
+      ? 'admin'
+      : role;
 
   const myVerif = (verifications || []).find(
     (v) =>
@@ -86,9 +94,9 @@ export const Navbar: React.FC = () => {
                 borderRadius: 'var(--radius-full)',
                 fontWeight: 700,
                 background:
-                  role === 'client'
+                  currentWorkspace === 'client'
                     ? 'rgba(14, 165, 233, 0.15)'
-                    : role === 'freelancer'
+                    : currentWorkspace === 'freelancer'
                     ? isApproved
                       ? 'rgba(16, 185, 129, 0.15)'
                       : isRejected
@@ -96,9 +104,9 @@ export const Navbar: React.FC = () => {
                       : 'rgba(245, 158, 11, 0.15)'
                     : 'rgba(245, 158, 11, 0.15)',
                 color:
-                  role === 'client'
+                  currentWorkspace === 'client'
                     ? 'var(--accent-cyan)'
-                    : role === 'freelancer'
+                    : currentWorkspace === 'freelancer'
                     ? isApproved
                       ? 'var(--accent-emerald)'
                       : isRejected
@@ -106,9 +114,9 @@ export const Navbar: React.FC = () => {
                       : 'var(--accent-amber)'
                     : 'var(--accent-amber)',
                 border:
-                  role === 'client'
+                  currentWorkspace === 'client'
                     ? '1px solid rgba(14, 165, 233, 0.3)'
-                    : role === 'freelancer'
+                    : currentWorkspace === 'freelancer'
                     ? isApproved
                       ? '1px solid rgba(16, 185, 129, 0.3)'
                       : isRejected
@@ -117,7 +125,9 @@ export const Navbar: React.FC = () => {
                     : '1px solid rgba(245, 158, 11, 0.3)',
               }}
             >
-              {role === 'freelancer'
+              {currentWorkspace === 'client'
+                ? 'CLIENT WORKSPACE'
+                : currentWorkspace === 'freelancer'
                 ? isApproved
                   ? 'FREELANCER • VERIFIED PRO'
                   : isRejected
@@ -125,13 +135,13 @@ export const Navbar: React.FC = () => {
                   : isPending
                   ? 'FREELANCER • UNDER REVIEW'
                   : 'FREELANCER • UNVERIFIED'
-                : `${role.toUpperCase()} WORKSPACE`}
+                : `${currentWorkspace.toUpperCase()} WORKSPACE`}
             </span>
           </div>
           <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1 }}>
-            {role === 'client'
+            {currentWorkspace === 'client'
               ? 'Client Projects & Escrow Management'
-              : role === 'freelancer'
+              : currentWorkspace === 'freelancer'
               ? isApproved
                 ? 'Verified Freelancer Studio'
                 : 'Trust & Profile Verification'
@@ -397,9 +407,9 @@ export const Navbar: React.FC = () => {
                 style={{
                   fontSize: '0.7rem',
                   color:
-                    role === 'client'
+                    currentWorkspace === 'client'
                       ? 'var(--accent-cyan)'
-                      : role === 'freelancer'
+                      : currentWorkspace === 'freelancer'
                       ? 'var(--accent-emerald)'
                       : 'var(--accent-amber)',
                   display: 'flex',
@@ -409,7 +419,7 @@ export const Navbar: React.FC = () => {
                 }}
               >
                 {currentUser.isVerified && <CheckCircle2 size={10} />}
-                {role.toUpperCase()}
+                {currentWorkspace.toUpperCase()}
               </span>
             </div>
           </div>
