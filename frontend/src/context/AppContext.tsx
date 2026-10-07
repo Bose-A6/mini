@@ -548,17 +548,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const isFetchingRef = useRef<boolean>(false);
-  const lastFetchedAtRef = useRef<number>(0);
 
   // Fetch gigs, bids, contracts, messages, and verifications from backend API and sync with state
-  const fetchGigsFromBackend = useCallback(async (force = false) => {
-    const now = Date.now();
+  const fetchGigsFromBackend = useCallback(async () => {
     if (isFetchingRef.current) return;
-    // Throttle automatic refetches to at most once every 10 seconds unless forced
-    if (!force && now - lastFetchedAtRef.current < 10000) return;
-    
     isFetchingRef.current = true;
-    lastFetchedAtRef.current = now;
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -743,19 +737,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Background polling: lightweight 20s interval
+  // Background polling: lightweight 15s interval and on view change
   useEffect(() => {
-    fetchGigsFromBackend(true);
+    fetchGigsFromBackend();
     const interval = setInterval(() => {
-      fetchGigsFromBackend(false);
-    }, 20000);
+      fetchGigsFromBackend();
+    }, 15000);
     return () => clearInterval(interval);
   }, [fetchGigsFromBackend]);
+
+  useEffect(() => {
+    fetchGigsFromBackend();
+  }, [activeView, fetchGigsFromBackend]);
 
   // Explicit manual refresh
   const refreshGigs = useCallback(async () => {
     setIsSyncingGigs(true);
-    await fetchGigsFromBackend(true);
+    await fetchGigsFromBackend();
     setTimeout(() => setIsSyncingGigs(false), 300);
   }, [fetchGigsFromBackend]);
 
