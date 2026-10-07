@@ -3882,6 +3882,41 @@
   ],
   "verifications": [
     {
+      "id": "verif-1791386639792",
+      "userId": "4080c363-326a-4bc7-a830-b6c3360a6846",
+      "userName": "freelancer",
+      "userEmail": "freelancer@gmail.com",
+      "professionalTitle": "Freelance Specialist",
+      "yearsExperience": "5",
+      "status": "approved",
+      "idType": "passport",
+      "idNumber": "",
+      "portfolioUrl": "",
+      "specialties": [],
+      "idDocumentUrl": "https://documents.freelancestack.dev/verif/passport-scan-encrypted.pdf",
+      "selfieUrl": "https://api.dicebear.com/7.x/bottts/svg?seed=4080c363-326a-4bc7-a830-b6c3360a6846",
+      "portfolioFiles": [
+        "https://github.com/freelancestack/demo-showcase",
+        "https://dribbble.com/craft-shots"
+      ],
+      "certificates": [
+        "https://certificates.coursera.org/verified-meta-fullstack.pdf"
+      ],
+      "externalLinks": [
+        "https://linkedin.com/in/freelancer-pro",
+        "https://github.com/freelancestack"
+      ],
+      "skillTags": [
+        "React / Next.js",
+        "TypeScript",
+        "Supabase & PostgreSQL"
+      ],
+      "pitchStatement": "Seasoned full-stack engineer with 5+ years building scalable SaaS web applications with high security and testing standards.",
+      "submittedAt": "2026-10-07T15:24:00.194Z",
+      "adminComment": "Identity verified & credentials approved by Administrator.",
+      "reviewedAt": "2026-10-07T15:24:37.525Z"
+    },
+    {
       "id": "verif-1791384680461",
       "userId": "8d342bdf-02cd-4348-8acd-d3957afde468",
       "userName": "free",

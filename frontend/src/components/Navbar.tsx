@@ -153,7 +153,7 @@ export const Navbar: React.FC = () => {
       {/* Segregated Role-Specific Navigation Links */}
       <nav className="nav-links">
         {/* 1. Client Links */}
-        {role === 'client' && (
+        {currentWorkspace === 'client' && (
           <>
             <button
               className={`nav-item ${activeView === 'client' ? 'active' : ''}`}
@@ -180,7 +180,7 @@ export const Navbar: React.FC = () => {
         )}
 
         {/* 2. Freelancer Links */}
-        {role === 'freelancer' && (
+        {currentWorkspace === 'freelancer' && (
           <>
             <button
               className={`nav-item ${activeView === 'freelancer' ? 'active' : ''}`}
@@ -233,7 +233,7 @@ export const Navbar: React.FC = () => {
         )}
 
         {/* 3. Admin Links */}
-        {role === 'admin' && (
+        {currentWorkspace === 'admin' && (
           <>
             <button
               className={`nav-item ${activeView === 'admin' ? 'active' : ''}`}
@@ -483,7 +483,7 @@ export const Navbar: React.FC = () => {
             zIndex: 999,
           }}
         >
-          {role === 'client' && (
+          {currentWorkspace === 'client' && (
             <>
               <button
                 className={`nav-item ${activeView === 'client' ? 'active' : ''}`}
@@ -512,7 +512,7 @@ export const Navbar: React.FC = () => {
             </>
           )}
 
-          {role === 'freelancer' && (
+          {currentWorkspace === 'freelancer' && (
             <>
               <button
                 className={`nav-item ${activeView === 'freelancer' ? 'active' : ''}`}
@@ -549,7 +549,7 @@ export const Navbar: React.FC = () => {
             </>
           )}
 
-          {role === 'admin' && (
+          {currentWorkspace === 'admin' && (
             <>
               <button
                 className={`nav-item ${activeView === 'admin' ? 'active' : ''}`}
