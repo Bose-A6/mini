@@ -136,8 +136,8 @@ export const ContractWorkspace: React.FC = () => {
     );
   }
 
-  const isFreelancer = currentUser?.role === 'freelancer' || (currentUser && currentUser.id === contract.freelancerId) || !currentUser;
-  const isClient = currentUser?.role === 'client' || (currentUser && currentUser.id === contract.clientId) || !currentUser;
+  const isClient = currentUser?.role === 'client' || (Boolean(currentUser) && currentUser?.id === contract.clientId);
+  const isFreelancer = currentUser?.role === 'freelancer' || (Boolean(currentUser) && currentUser?.id === contract.freelancerId && !isClient);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();

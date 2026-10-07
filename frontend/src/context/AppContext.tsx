@@ -515,6 +515,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setActiveView = useCallback((view: AppView) => {
     setActiveViewState(view);
+    if (view === 'client' || view === 'freelancer' || view === 'admin') {
+      setCurrentUser((prev) => {
+        if (!prev || prev.role === view) return prev;
+        const updated: Persona = {
+          ...prev,
+          role: view,
+          professionalTitle:
+            view === 'freelancer'
+              ? (prev.professionalTitle?.includes('Client') ? 'Verified Specialist' : prev.professionalTitle || 'Verified Specialist')
+              : view === 'admin'
+              ? 'Platform Administrator'
+              : (prev.professionalTitle?.includes('Specialist') ? 'Client Founder' : prev.professionalTitle || 'Client Founder'),
+        };
+        try {
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+    }
     try {
       window.location.hash = view;
     } catch {}
@@ -527,7 +546,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '').toLowerCase();
       if (['gigs', 'client', 'freelancer', 'contracts', 'admin', 'verification', 'auth', 'login', 'signup'].includes(hash)) {
-        setActiveViewState(hash as AppView);
+        const view = hash as AppView;
+        setActiveViewState(view);
+        if (view === 'client' || view === 'freelancer' || view === 'admin') {
+          setCurrentUser((prev) => {
+            if (!prev || prev.role === view) return prev;
+            const updated: Persona = {
+              ...prev,
+              role: view,
+              professionalTitle:
+                view === 'freelancer'
+                  ? (prev.professionalTitle?.includes('Client') ? 'Verified Specialist' : prev.professionalTitle || 'Verified Specialist')
+                  : view === 'admin'
+                  ? 'Platform Administrator'
+                  : (prev.professionalTitle?.includes('Specialist') ? 'Client Founder' : prev.professionalTitle || 'Client Founder'),
+            };
+            try {
+              localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+        }
       }
     };
     window.addEventListener('hashchange', handleHashChange);
