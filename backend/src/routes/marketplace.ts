@@ -2,22 +2,17 @@ import { Router } from 'express';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { fileURLToPath } from 'url';
 
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
 
-// Setup persistent disk storage file path with serverless / tmpdir fallback
+// Setup persistent disk storage file path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const isServerless = Boolean(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL);
-const PRIMARY_DATA_DIR = path.resolve(__dirname, '../../data');
-const TMP_DATA_DIR = path.join(os.tmpdir(), 'marketplace_data');
-const DATA_DIR = isServerless ? TMP_DATA_DIR : PRIMARY_DATA_DIR;
+const DATA_DIR = path.resolve(__dirname, '../../data');
 const STORE_PATH = path.join(DATA_DIR, 'marketplace_store.json');
-const BUNDLED_STORE_PATH = path.join(PRIMARY_DATA_DIR, 'marketplace_store.json');
 
 // Initial seed gigs if store is completely empty
 const initialSeedGigs = [
@@ -364,22 +359,9 @@ export const getCanonicalGigKey = (title?: string, clientId?: string): string =>
 const loadStore = (): StoreData => {
   try {
     if (!fs.existsSync(DATA_DIR)) {
-      try {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      } catch {}
+      fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    let raw: string | null = null;
-    if (fs.existsSync(STORE_PATH)) {
-      try {
-        raw = fs.readFileSync(STORE_PATH, 'utf-8');
-      } catch {}
-    }
-    if (!raw && fs.existsSync(BUNDLED_STORE_PATH)) {
-      try {
-        raw = fs.readFileSync(BUNDLED_STORE_PATH, 'utf-8');
-      } catch {}
-    }
-    if (!raw) {
+    if (!fs.existsSync(STORE_PATH)) {
       const initial: StoreData = {
         gigs: initialSeedGigs,
         bids: [],
@@ -388,11 +370,10 @@ const loadStore = (): StoreData => {
         verifications: initialSeedVerifications,
         tickets: initialSeedTickets,
       };
-      try {
-        fs.writeFileSync(STORE_PATH, JSON.stringify(initial, null, 2), 'utf-8');
-      } catch {}
+      fs.writeFileSync(STORE_PATH, JSON.stringify(initial, null, 2), 'utf-8');
       return initial;
     }
+    const raw = fs.readFileSync(STORE_PATH, 'utf-8');
     const parsed = JSON.parse(raw);
     const existingGigs = Array.isArray(parsed.gigs) ? parsed.gigs : [];
     
@@ -537,21 +518,13 @@ const loadStore = (): StoreData => {
 };
 
 const saveStore = (data: StoreData) => {
-  store = data;
   try {
     if (!fs.existsSync(DATA_DIR)) {
-      try {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      } catch {}
+      fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
-    try {
-      if (!fs.existsSync(TMP_DATA_DIR)) {
-        fs.mkdirSync(TMP_DATA_DIR, { recursive: true });
-      }
-      fs.writeFileSync(path.join(TMP_DATA_DIR, 'marketplace_store.json'), JSON.stringify(data, null, 2), 'utf-8');
-    } catch {}
+    console.error('Error writing marketplace disk store:', err);
   }
 };
 
