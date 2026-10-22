@@ -63,7 +63,7 @@ export const ContractWorkspace: React.FC = () => {
     return String(c.clientId).trim() === String(currentUser.id).trim() || String(c.freelancerId).trim() === String(currentUser.id).trim();
   });
 
-  const contract = (contracts || []).find((c) => c.id === selectedContractId) || userContracts[0] || null;
+  const contract = (contracts || []).find((c) => c.id === selectedContractId) || userContracts[0] || (contracts || [])[0] || null;
   const [chatInput, setChatInput] = useState('');
   const [revisionModalMilestoneId, setRevisionModalMilestoneId] = useState<string | null>(null);
   const [revisionReason, setRevisionReason] = useState('');
@@ -136,8 +136,8 @@ export const ContractWorkspace: React.FC = () => {
     );
   }
 
-  const isClient = currentUser?.role === 'client' || (Boolean(currentUser) && currentUser?.id === contract.clientId);
-  const isFreelancer = currentUser?.role === 'freelancer' || (Boolean(currentUser) && currentUser?.id === contract.freelancerId && !isClient);
+  const isFreelancer = currentUser?.role === 'freelancer' || (!currentUser?.role && currentUser?.id === contract.freelancerId);
+  const isClient = !isFreelancer && (currentUser?.role === 'client' || currentUser?.role === 'admin' || currentUser?.id === contract.clientId || !currentUser);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +154,7 @@ export const ContractWorkspace: React.FC = () => {
       (m) => m.id !== milestoneId && m.status !== 'approved'
     );
     if (remainingPending.length === 0) {
-      if (isClient) {
+      if (isClient && !isFreelancer) {
         addToast(
           'success',
           'All Escrows Approved! 🎉',
@@ -261,7 +261,7 @@ export const ContractWorkspace: React.FC = () => {
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <span className="persona-badge badge-client">ESCROW CONTRACT: {contract.id}</span>
+            <span className={`persona-badge ${isFreelancer ? 'badge-freelancer' : 'badge-client'}`}>ESCROW CONTRACT: {contract.id}</span>
             <span
               style={{
                 fontSize: '0.75rem',
@@ -361,7 +361,7 @@ export const ContractWorkspace: React.FC = () => {
           )}
 
           {/* Complete Contract button for Client - strictly locked until all individual milestone escrows are approved */}
-          {contract.status !== 'completed' && contract.status !== 'pending_acceptance' && isClient && (
+          {contract.status !== 'completed' && contract.status !== 'pending_acceptance' && isClient && !isFreelancer && (
             <button
               className={allMilestonesApproved ? "btn-success" : "btn-secondary"}
               onClick={() => {
@@ -592,7 +592,7 @@ export const ContractWorkspace: React.FC = () => {
                 </>
               )}
 
-              {isClient && (
+              {isClient && !isFreelancer && (
                 <button
                   className="btn-secondary"
                   onClick={() => cancelContractOffer(contract.id)}
@@ -759,7 +759,7 @@ export const ContractWorkspace: React.FC = () => {
                   </div>
                   <div>
                     <h3 style={{ fontSize: '1.15rem', margin: 0, color: 'var(--text-primary)' }}>
-                      {isClient
+                      {isClient && !isFreelancer
                         ? (isContractCompleted ? 'Client Rating & Official Testimonial' : 'Rate Specialist & Complete Sign-off')
                         : 'Official Client Rating & Feedback'}
                     </h3>
@@ -816,7 +816,7 @@ export const ContractWorkspace: React.FC = () => {
               </div>
 
               {/* Client interactive rating form or completed display */}
-              {isClient ? (
+              {isClient && !isFreelancer ? (
                 <div>
                   {isContractCompleted && !isEditingRating ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1180,7 +1180,7 @@ export const ContractWorkspace: React.FC = () => {
                           </button>
                         )}
 
-                        {isClient && contract.status !== 'completed' && !isApproved && (
+                        {isClient && !isFreelancer && contract.status !== 'completed' && !isApproved && (
                           isSubmitted ? (
                             <button
                               type="button"
@@ -1272,7 +1272,7 @@ export const ContractWorkspace: React.FC = () => {
                     )}
 
                     {/* Indicator for Freelancer when Milestone is Submitted */}
-                    {m.status === 'submitted' && isFreelancer && !isClient && contract.status !== 'completed' && (
+                    {m.status === 'submitted' && isFreelancer && contract.status !== 'completed' && (
                       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
                         <span style={{ fontSize: '0.82rem', color: 'var(--accent-cyan)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           ⏳ Deliverable Submitted • Awaiting Client Review & Escrow Release
@@ -1292,7 +1292,7 @@ export const ContractWorkspace: React.FC = () => {
                     )}
 
                     {/* Actions for Client on Submitted Milestone */}
-                    {m.status === 'submitted' && isClient && contract.status !== 'completed' && (
+                    {m.status === 'submitted' && isClient && !isFreelancer && contract.status !== 'completed' && (
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
                         <button
                           className="btn-secondary"
